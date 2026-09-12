@@ -6,7 +6,6 @@ import {
   Clock,
   Copy,
   Download,
-  ExternalLink,
   MapPin,
   Sparkles,
   User,
@@ -103,11 +102,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     setTimeout(() => setCopiedSummary(false), 2500);
   };
 
-  const handleGoogleCalendarSync = () => {
-    if (myBookedShifts.length === 0) return;
-    const first = myBookedShifts[0];
-    const startIso = toIcsUtcString(zonedTimeToUtc(first.slot.date, first.slot.startTime, config.timezone));
-    const endIso = toIcsUtcString(zonedTimeToUtc(first.slot.date, first.slot.endTime, config.timezone));
+  const handleGoogleCalendarSync = (slot: TimeSlot) => {
+    const startIso = toIcsUtcString(zonedTimeToUtc(slot.date, slot.startTime, config.timezone));
+    const endIso = toIcsUtcString(zonedTimeToUtc(slot.date, slot.endTime, config.timezone));
     const title = encodeURIComponent(`Expo Staffing: ${config.title}`);
     const details = encodeURIComponent(
       `Expo staffing shift for ${currentStaff.name}.\nEvent: ${config.title}\nLocation: ${config.location}`
@@ -183,19 +180,31 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   </div>
                 </div>
 
-                {onReleaseShift && (
+                <div className="flex items-center space-x-1 shrink-0">
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      onReleaseShift(slot, booking);
-                    }}
-                    className="focus-ring text-[11px] text-[#da3832] hover:bg-[#fdf2f2] px-2 py-1 rounded font-semibold transition-colors cursor-pointer"
-                    title="Give up this slot"
+                    onClick={() => handleGoogleCalendarSync(slot)}
+                    className="focus-ring text-[11px] text-[#0063a3] hover:bg-[#e5f2f8] px-2 py-1 rounded font-semibold transition-colors cursor-pointer flex items-center space-x-1"
+                    title="Create a Google Calendar event for this shift"
                   >
-                    Release
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Create Calendar Event</span>
                   </button>
-                )}
+
+                  {onReleaseShift && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onReleaseShift(slot, booking);
+                      }}
+                      className="focus-ring text-[11px] text-[#da3832] hover:bg-[#fdf2f2] px-2 py-1 rounded font-semibold transition-colors cursor-pointer"
+                      title="Give up this slot"
+                    >
+                      Release
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -245,17 +254,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </button>
           </div>
 
-          {/* Tertiary Action: Google Calendar Web Link */}
-          <div className="pt-1 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleGoogleCalendarSync}
-              className="focus-ring rounded text-xs text-[#0063a3] hover:text-[#005084] font-semibold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Direct Google Calendar Link</span>
-            </button>
-
+          <div className="pt-1 flex items-center justify-end">
             <button
               type="button"
               onClick={onClose}
