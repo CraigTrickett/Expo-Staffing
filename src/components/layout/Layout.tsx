@@ -7,13 +7,11 @@ import {
   Shield,
   Users,
   Download,
-  Zap,
   History,
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { downloadIcs, generateIcsFile } from '@/lib/calendar';
-import { concurrencyTester } from '@/lib/firebase';
-import { ToastContainer, toast } from '@/components/common/Toast';
+import { ToastContainer } from '@/components/common/Toast';
 import { MyEventsPanel } from '@/components/common/MyEventsPanel';
 
 interface LayoutProps {
@@ -24,22 +22,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute }) => {
   const { currentEvent: config, slots, resetToDemo } = useEventStore();
-  const [isConflictArmed, setIsConflictArmed] = useState(false);
   const [showMyEvents, setShowMyEvents] = useState(false);
-  const isDevMode = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
-
-  const handleToggleSimulateConflict = () => {
-    const newState = concurrencyTester.toggleSimulateConflict();
-    setIsConflictArmed(newState);
-    if (newState) {
-      toast.warning(
-        'Armed: Next shift claim will simulate a 409 concurrency conflict from another user.',
-        'Concurrency Test Armed'
-      );
-    } else {
-      toast.info('Simulated conflict disarmed.');
-    }
-  };
 
   const handleGlobalExport = () => {
     if (!config) return;
@@ -145,10 +128,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <span className="font-bold text-[#252a2e]">Expo Staffing</span>
-            <span>&bull;</span>
-            <span>Trimble Modus Design System</span>
-            <span>&bull;</span>
-            <span className="text-[#7c878e]">Zero-login link coordination</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -160,22 +139,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export ICS</span>
-              </button>
-            )}
-
-            {isDevMode && (
-              <button
-                type="button"
-                onClick={handleToggleSimulateConflict}
-                className={`focus-ring transition-colors flex items-center space-x-1.5 px-2 py-1 rounded border text-[11px] cursor-pointer font-medium ${
-                  isConflictArmed
-                    ? 'bg-[#fef8e8] text-[#8a5800] border-[#fbad26] animate-pulse'
-                    : 'hover:text-[#0063a3] text-[#46535e] border-[#d8dce0] bg-[#f8f9fa]'
-                }`}
-                title="[Dev only] Toggle simulated 409 conflict: tests automatic rollback and toast warning on next shift claim"
-              >
-                <Zap className={`w-3.5 h-3.5 ${isConflictArmed ? 'text-[#8a5800]' : 'text-[#7c878e]'}`} />
-                <span>{isConflictArmed ? '409 Conflict Armed' : 'Simulate 409 Conflict (dev)'}</span>
               </button>
             )}
 
