@@ -188,9 +188,6 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
         <div className="bg-white border border-[#d8dce0] rounded p-5 shadow-modus-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0]">
-                Expo Staffing Shift Picker
-              </span>
               <span className="text-xs text-[#46535e] font-mono font-semibold">
                 Target: {metrics.dynamicTargetHours}h per person
               </span>

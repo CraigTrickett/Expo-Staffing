@@ -8,11 +8,13 @@ import {
   Users,
   Download,
   Zap,
+  History,
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { downloadIcs, generateIcsFile } from '@/lib/calendar';
 import { concurrencyTester } from '@/lib/firebase';
 import { ToastContainer, toast } from '@/components/common/Toast';
+import { MyEventsPanel } from '@/components/common/MyEventsPanel';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,6 +25,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute }) => {
   const { currentEvent: config, slots, resetToDemo } = useEventStore();
   const [isConflictArmed, setIsConflictArmed] = useState(false);
+  const [showMyEvents, setShowMyEvents] = useState(false);
   const isDevMode = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
 
   const handleToggleSimulateConflict = () => {
@@ -90,6 +93,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Event</span>
             </a>
+
+            <button
+              type="button"
+              onClick={() => setShowMyEvents(true)}
+              className="focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">My Events</span>
+            </button>
 
             {config && (
               <>
@@ -182,6 +194,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
 
       {/* Global Toast Notifications Container */}
       <ToastContainer />
+
+      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
     </div>
   );
 };

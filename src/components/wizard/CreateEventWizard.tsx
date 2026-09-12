@@ -13,20 +13,16 @@ import {
   FileText,
   MapPin,
   HelpCircle,
-  History,
 } from 'lucide-react';
 import type { SlotDuration } from '@/types';
 import { cn } from '@/lib/utils';
 import { useEventStore } from '@/store/useEventStore';
-import { MyEventsPanel } from './MyEventsPanel';
 
 interface CreateEventWizardProps {
   onEventCreated?: (adminKey: string) => void;
 }
 
 export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCreated }) => {
-  const [showMyEvents, setShowMyEvents] = useState(false);
-
   // Helper to compute default dates (tomorrow and day after)
   const today = new Date();
   const defaultStart = new Date(today);
@@ -122,19 +118,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4">
       {/* Wizard Header Hero */}
       <div className="text-center space-y-3 mb-8">
-        <div className="flex items-center justify-center gap-2">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
-            <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
-            <span>Zero Signups &bull; Shareable Link-Based Architecture</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowMyEvents(true)}
-            className="focus-ring inline-flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer"
-          >
-            <History className="w-3.5 h-3.5" />
-            <span>Lost your link?</span>
-          </button>
+        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
+          <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
+          <span>Zero Signups &bull; Shareable Link-Based Architecture</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#252a2e]">
           Create Expo Schedule
@@ -426,8 +412,6 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
           </div>
         </div>
       </form>
-
-      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
     </div>
   );
 };

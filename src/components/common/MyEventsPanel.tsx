@@ -26,8 +26,8 @@ export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
             <div>
               <h3 className="text-base font-bold text-[#252a2e]">Events on This Device</h3>
               <p className="text-xs text-[#46535e] mt-0.5 max-w-sm">
-                Lost your admin link? Any event you created or opened in this browser is listed here.
-                This does not include events from other devices or browsers.
+                Any event you created or opened in this browser is listed here — jump back into one,
+                or find a link you'd lost. This does not include events from other devices or browsers.
               </p>
             </div>
           </div>
