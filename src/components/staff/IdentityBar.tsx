@@ -281,7 +281,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   placeholder="e.g. Jordan Miller"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-white border border-[#d8dce0] rounded px-3 py-2 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:border-[#0063a3]"
+                  className="w-full bg-white border border-[#d8dce0] rounded px-3 py-2 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3]"
                 />
               </div>
 
@@ -294,7 +294,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   placeholder="e.g. jordan@company.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full bg-white border border-[#d8dce0] rounded px-3 py-2 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:border-[#0063a3]"
+                  className="w-full bg-white border border-[#d8dce0] rounded px-3 py-2 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3]"
                 />
               </div>
 

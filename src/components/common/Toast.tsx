@@ -88,42 +88,42 @@ export const ToastContainer: React.FC = () => {
       className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
     >
       {toasts.map((t) => {
-        let borderClass = 'border-slate-700 bg-slate-900/95 text-slate-100';
+        let surfaceClass = 'bg-[#e5f2f8] border-[#b9dcf0]';
         let Icon = Info;
-        let iconColor = 'text-blue-400';
+        let iconColor = 'text-[#0063a3]';
 
         if (t.type === 'success') {
-          borderClass = 'border-emerald-500/40 bg-slate-900/95 text-emerald-100';
+          surfaceClass = 'bg-[#e6f5ec] border-[#a3e0be]';
           Icon = CheckCircle2;
-          iconColor = 'text-emerald-400';
+          iconColor = 'text-[#00823b]';
         } else if (t.type === 'error') {
-          borderClass = 'border-red-500/50 bg-slate-900/95 text-red-100';
+          surfaceClass = 'bg-[#fdf2f2] border-[#f5b5b3]';
           Icon = AlertCircle;
-          iconColor = 'text-red-400';
+          iconColor = 'text-[#da3832]';
         } else if (t.type === 'warning') {
-          borderClass = 'border-amber-500/50 bg-slate-900/95 text-amber-100';
+          surfaceClass = 'bg-[#fef8e8] border-[#f7c970]';
           Icon = AlertTriangle;
-          iconColor = 'text-amber-400';
+          iconColor = 'text-[#8a5800]';
         }
 
         return (
           <div
             key={t.id}
             className={cn(
-              'pointer-events-auto rounded-xl border p-3.5 shadow-2xl backdrop-blur-md transition-all duration-200 animate-in slide-in-from-bottom-3 fade-in flex items-start gap-3',
-              borderClass
+              'pointer-events-auto rounded border p-3.5 shadow-modus-3 transition-all duration-200 animate-in slide-in-from-bottom-3 fade-in flex items-start gap-3',
+              surfaceClass
             )}
             role="alert"
           >
             <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', iconColor)} />
             <div className="flex-1 text-xs">
-              {t.title && <div className="font-semibold mb-0.5 text-white">{t.title}</div>}
-              <div className="text-slate-300 leading-relaxed">{t.message}</div>
+              {t.title && <div className="font-semibold mb-0.5 text-[#252a2e]">{t.title}</div>}
+              <div className="text-[#46535e] leading-relaxed">{t.message}</div>
             </div>
             <button
               type="button"
               onClick={() => toast.dismiss(t.id)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
+              className="focus-ring text-[#7c878e] hover:text-[#252a2e] p-1 rounded hover:bg-black/5 transition-colors shrink-0"
               aria-label="Close notification"
             >
               <X className="w-3.5 h-3.5" />

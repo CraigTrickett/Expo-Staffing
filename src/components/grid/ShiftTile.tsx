@@ -164,7 +164,7 @@ export const ShiftTile: React.FC<ShiftTileProps> = ({
                           onLeave?.(slot.id, booking.staffId);
                         }
                       }}
-                      className="opacity-70 group-hover/booking:opacity-100 hover:text-[#da3832] p-0.5 rounded transition-all text-[#7c878e] hover:bg-[#fdf2f2] cursor-pointer"
+                      className="focus-ring opacity-70 group-hover/booking:opacity-100 hover:text-[#da3832] p-0.5 rounded transition-all text-[#7c878e] hover:bg-[#fdf2f2] cursor-pointer"
                       title={isAdmin ? `Remove ${booking.staffName}` : 'Cancel your shift'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -183,7 +183,7 @@ export const ShiftTile: React.FC<ShiftTileProps> = ({
           <button
             type="button"
             onClick={handleAction}
-            className="w-full py-1.5 px-3 rounded text-xs font-semibold bg-white hover:bg-[#fdf2f2] text-[#0063a3] hover:text-[#da3832] border border-[#0063a3] hover:border-[#da3832] transition-colors flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+            className="focus-ring w-full py-1.5 px-3 rounded text-xs font-semibold bg-white hover:bg-[#fdf2f2] text-[#0063a3] hover:text-[#da3832] border border-[#0063a3] hover:border-[#da3832] transition-colors flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
           >
             <Check className="w-3.5 h-3.5 text-[#0063a3]" />
             <span>Claimed &bull; Click to release</span>
@@ -196,7 +196,7 @@ export const ShiftTile: React.FC<ShiftTileProps> = ({
           <button
             type="button"
             onClick={handleAction}
-            className="w-full py-1.5 px-3 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white border border-[#0063a3] transition-colors flex items-center justify-center space-x-1.5 shadow-xs active:scale-[0.98] cursor-pointer"
+            className="focus-ring w-full py-1.5 px-3 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white border border-[#0063a3] transition-colors flex items-center justify-center space-x-1.5 shadow-xs active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{currentIdentity ? 'Claim This Shift' : 'Sign Up for Shift'}</span>

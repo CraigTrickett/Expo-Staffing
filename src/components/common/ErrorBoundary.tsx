@@ -87,7 +87,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <button
                 type="button"
                 onClick={this.handleTryAgain}
-                className="w-full sm:w-auto flex-1 px-4 py-2.5 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-bold rounded flex items-center justify-center space-x-2 transition-colors shadow-xs cursor-pointer"
+                className="focus-ring w-full sm:w-auto flex-1 px-4 py-2.5 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-bold rounded flex items-center justify-center space-x-2 transition-colors shadow-xs cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Try Again</span>
@@ -95,14 +95,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full sm:w-auto px-4 py-2.5 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] text-xs font-semibold rounded transition-colors cursor-pointer shadow-xs"
+                className="focus-ring w-full sm:w-auto px-4 py-2.5 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] text-xs font-semibold rounded transition-colors cursor-pointer shadow-xs"
               >
                 Reload Window
               </button>
               <button
                 type="button"
                 onClick={this.handleResetStorage}
-                className="w-full sm:w-auto px-4 py-2.5 bg-[#fdf3f2] hover:bg-[#fce5e4] border border-[#f5b5b2] text-[#da3832] text-xs font-semibold rounded flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                className="focus-ring w-full sm:w-auto px-4 py-2.5 bg-[#fdf3f2] hover:bg-[#fce5e4] border border-[#f5b5b2] text-[#da3832] text-xs font-semibold rounded flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
                 title="Wipes local state and re-seeds clean demo schedule"
               >
                 <RotateCcw className="w-3.5 h-3.5" />

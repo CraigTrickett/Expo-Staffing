@@ -94,7 +94,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
               type="button"
               onClick={() => setFilter('all')}
               className={cn(
-                'px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer',
+                'focus-ring px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer',
                 filter === 'all'
                   ? 'bg-[#0063a3] text-white shadow-xs'
                   : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6]'
@@ -106,7 +106,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
               type="button"
               onClick={() => setFilter('open')}
               className={cn(
-                'px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
+                'focus-ring px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
                 filter === 'open'
                   ? 'bg-[#fef8e8] text-[#8a5800] border-[#f7c970] shadow-xs'
                   : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border-transparent'
@@ -119,7 +119,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
                 type="button"
                 onClick={() => setFilter('mine')}
                 className={cn(
-                  'px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
+                  'focus-ring px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
                   filter === 'mine'
                     ? 'bg-[#e5f2f8] text-[#0063a3] border-[#b9dcf0] shadow-xs'
                     : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border-transparent'
@@ -132,7 +132,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
               type="button"
               onClick={() => setFilter('full')}
               className={cn(
-                'px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
+                'focus-ring px-2.5 py-1 rounded text-xs font-semibold transition-colors cursor-pointer border',
                 filter === 'full'
                   ? 'bg-[#e6f5ec] text-[#00823b] border-[#a3e0be] shadow-xs'
                   : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border-transparent'
@@ -168,7 +168,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
                 type="button"
                 onClick={() => setSelectedMobileDate(dateString)}
                 className={cn(
-                  'flex-1 min-w-[120px] px-3 py-2 rounded text-xs font-medium text-center transition-all cursor-pointer shrink-0',
+                  'focus-ring flex-1 min-w-[120px] px-3 py-2 rounded text-xs font-medium text-center transition-all cursor-pointer shrink-0',
                   isSelected
                     ? 'bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0] shadow-xs font-bold'
                     : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f8f9fa]'

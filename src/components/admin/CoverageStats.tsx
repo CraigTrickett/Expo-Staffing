@@ -87,7 +87,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
           <button
             type="button"
             onClick={handleCopyLink}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             title="Copy Public Signup Link to share with staff"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -97,7 +97,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             <button
               type="button"
               onClick={onOpenShareModal}
-              className="flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+              className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
               title="Open full capability share modal with QR code and secret admin link"
             >
               <Share2 className="w-3.5 h-3.5 text-[#0063a3]" />
@@ -108,7 +108,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             href={`#/event/${config.publicKey}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 bg-white hover:bg-[#f1f3f6] text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] rounded text-xs transition-colors shadow-xs"
+            className="focus-ring p-2 bg-white hover:bg-[#f1f3f6] text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] rounded text-xs transition-colors shadow-xs"
             title="Preview Staff Shift Picker in new tab"
           >
             <ExternalLink className="w-4 h-4" />
@@ -236,7 +236,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             type="button"
             onClick={onOpenZeroHoursDrawer}
             className={cn(
-              'w-full py-1.5 px-2.5 rounded text-xs font-semibold flex items-center justify-center space-x-1 transition-colors cursor-pointer',
+              'focus-ring w-full py-1.5 px-2.5 rounded text-xs font-semibold flex items-center justify-center space-x-1 transition-colors cursor-pointer',
               zeroHoursCount > 0
                 ? 'bg-[#fbad26] hover:bg-[#e49b1e] text-[#252a2e] font-bold shadow-xs'
                 : 'bg-white hover:bg-[#f1f3f6] text-[#46535e] border border-[#d8dce0]'

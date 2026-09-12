@@ -145,7 +145,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
+            className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -187,7 +187,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                       onClose();
                       onReleaseShift(slot, booking);
                     }}
-                    className="text-[11px] text-[#da3832] hover:bg-[#fdf2f2] px-2 py-1 rounded font-semibold transition-colors cursor-pointer"
+                    className="focus-ring text-[11px] text-[#da3832] hover:bg-[#fdf2f2] px-2 py-1 rounded font-semibold transition-colors cursor-pointer"
                     title="Give up this slot"
                   >
                     Release
@@ -209,7 +209,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadIcs}
-              className="p-3.5 bg-[#0063a3] hover:bg-[#005084] active:scale-98 text-white rounded shadow-xs text-left flex items-start space-x-3 transition-colors group cursor-pointer"
+              className="focus-ring p-3.5 bg-[#0063a3] hover:bg-[#005084] active:scale-98 text-white rounded shadow-xs text-left flex items-start space-x-3 transition-colors group cursor-pointer"
             >
               <Download className="w-5 h-5 text-[#b9dcf0] mt-0.5 shrink-0" />
               <div>
@@ -224,7 +224,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={handleCopySummary}
-              className="p-3.5 bg-white hover:bg-[#f1f3f6] active:scale-98 border border-[#d8dce0] text-[#252a2e] rounded text-left flex items-start space-x-3 transition-colors group shadow-xs cursor-pointer"
+              className="focus-ring p-3.5 bg-white hover:bg-[#f1f3f6] active:scale-98 border border-[#d8dce0] text-[#252a2e] rounded text-left flex items-start space-x-3 transition-colors group shadow-xs cursor-pointer"
             >
               {copiedSummary ? (
                 <Check className="w-5 h-5 text-[#00823b] mt-0.5 shrink-0" />
@@ -247,7 +247,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={handleGoogleCalendarSync}
-              className="text-xs text-[#0063a3] hover:text-[#005084] font-semibold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
+              className="focus-ring rounded text-xs text-[#0063a3] hover:text-[#005084] font-semibold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Direct Google Calendar Link</span>
@@ -256,7 +256,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] text-xs font-semibold rounded transition-colors cursor-pointer"
+              className="focus-ring px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] text-xs font-semibold rounded transition-colors cursor-pointer"
             >
               Close
             </button>

@@ -29,6 +29,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background-color: rgba(0, 99, 163, 0.2);
+  color: #252a2e;
+}
+
+@layer utilities {
+  /* Branded keyboard-focus ring, used in place of focus:outline-hidden alone.
+     Visible only for keyboard navigation; mouse/touch focus stays quiet. */
+  .focus-ring {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid #0063a3;
+    outline-offset: 2px;
+  }
+  /* For controls sitting on the dark navy header/nav, where the brand-blue
+     ring would sit too close in value to read against the background. */
+  .focus-ring-invert:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+}
+
 /* Modus standard scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

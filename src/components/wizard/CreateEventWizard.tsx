@@ -227,7 +227,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., AWS re:Invent Expo Booth #1420"
-                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden transition-colors"
+                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
               />
             </div>
 
@@ -243,7 +243,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., Venetian Expo Hall, Las Vegas, NV (Booth 1420)"
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden transition-colors"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
                 />
               </div>
             </div>
@@ -270,7 +270,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden transition-colors font-mono"
+                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
               />
             </div>
 
@@ -284,7 +284,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden transition-colors font-mono"
+                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
               />
             </div>
           </div>
@@ -302,7 +302,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   required
                   value={dailyStartTime}
                   onChange={(e) => setDailyStartTime(e.target.value)}
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden transition-colors font-mono"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
                 />
               </div>
             </div>
@@ -319,7 +319,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   required
                   value={dailyEndTime}
                   onChange={(e) => setDailyEndTime(e.target.value)}
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden transition-colors font-mono"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
                 />
               </div>
             </div>
@@ -406,7 +406,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   step={0.5}
                   value={targetHoursPerStaff}
                   onChange={(e) => setTargetHoursPerStaff(parseFloat(e.target.value) || 1)}
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden transition-colors font-mono"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
                 />
                 <span className="absolute right-3.5 top-2.5 text-xs text-[#7c878e] font-mono">
                   hours
@@ -436,7 +436,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               value={rosterRaw}
               onChange={(e) => setRosterRaw(e.target.value)}
               placeholder="Paste staff names (one per line or comma-separated)..."
-              className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded p-3 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden transition-colors font-mono leading-relaxed"
+              className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded p-3 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono leading-relaxed"
             />
             <p className="text-[11px] text-[#7c878e] mt-1">
               Reps can also claim shifts and add themselves anytime using the public link.

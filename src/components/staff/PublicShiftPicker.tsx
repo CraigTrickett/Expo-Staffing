@@ -269,7 +269,7 @@ export const PublicShiftPicker: React.FC<PublicShiftPickerProps> = ({ publicKey 
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
                   placeholder="e.g., Sarah Connor"
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25"
                 />
               </div>
 

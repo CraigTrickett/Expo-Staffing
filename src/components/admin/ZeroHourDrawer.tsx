@@ -100,7 +100,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#e7eaef] transition-colors"
+              className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#e7eaef] transition-colors"
               aria-label="Close drawer"
             >
               <X className="w-5 h-5" />
@@ -126,7 +126,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                 type="button"
                 onClick={handleCopySlackNudge}
                 className={cn(
-                  'flex-1 py-2 px-3 rounded text-xs font-semibold flex items-center justify-center space-x-2 transition-colors shadow-xs cursor-pointer',
+                  'focus-ring flex-1 py-2 px-3 rounded text-xs font-semibold flex items-center justify-center space-x-2 transition-colors shadow-xs cursor-pointer',
                   copiedSlack
                     ? 'bg-[#00823b] text-white'
                     : 'bg-[#0063a3] hover:bg-[#005084] text-white'
@@ -148,7 +148,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
               <button
                 type="button"
                 onClick={handleEmailAll}
-                className="py-2 px-3 bg-white hover:bg-[#f1f3f6] text-[#252a2e] rounded text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-[#d8dce0] cursor-pointer shadow-xs"
+                className="focus-ring py-2 px-3 bg-white hover:bg-[#f1f3f6] text-[#252a2e] rounded text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-[#d8dce0] cursor-pointer shadow-xs"
                 title="Open default email client with all unassigned staff in recipient list"
               >
                 <Mail className="w-3.5 h-3.5 text-[#fbad26]" />
@@ -198,7 +198,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                       type="button"
                       onClick={() => handleCopyIndividualNudge(member)}
                       className={cn(
-                        'p-2 rounded text-xs transition-colors cursor-pointer',
+                        'focus-ring p-2 rounded text-xs transition-colors cursor-pointer',
                         copiedIndividualId === member.id
                           ? 'bg-[#e6f5ec] text-[#00823b]'
                           : 'bg-white text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
@@ -213,7 +213,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                     </button>
                     <a
                       href={`mailto:${member.email}?subject=${encodeURIComponent(`Expo Staffing Shifts: ${config.title}`)}&body=${encodeURIComponent(`Hi ${member.name},\n\nPlease grab your expo staffing shifts here:\n${publicUrl}`)}`}
-                      className="p-2 bg-white text-[#46535e] hover:text-[#0063a3] hover:bg-[#f1f3f6] border border-[#d8dce0] rounded text-xs transition-colors"
+                      className="focus-ring p-2 bg-white text-[#46535e] hover:text-[#0063a3] hover:bg-[#f1f3f6] border border-[#d8dce0] rounded text-xs transition-colors"
                       title={`Send email reminder to ${member.name}`}
                     >
                       <Mail className="w-3.5 h-3.5" />
@@ -233,7 +233,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                   onClose();
                   onNavigateToRoster();
                 }}
-                className="text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors cursor-pointer"
+                className="focus-ring rounded text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors cursor-pointer"
               >
                 Open Roster Audit &rarr;
               </button>
@@ -241,7 +241,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="ml-auto px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-semibold rounded transition-colors shadow-xs cursor-pointer"
+              className="focus-ring ml-auto px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-semibold rounded transition-colors shadow-xs cursor-pointer"
             >
               Done
             </button>

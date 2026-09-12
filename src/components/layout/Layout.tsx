@@ -65,7 +65,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
   };
 
   return (
-    <div className="bg-[#f1f3f6] text-[#252a2e] min-h-screen flex flex-col font-sans selection:bg-[#0063a3]/20">
+    <div className="bg-[#f1f3f6] text-[#252a2e] min-h-screen flex flex-col font-sans">
       {/* Top Trimble Modus Navigation Bar */}
       <header className="sticky top-0 z-30 bg-[#004f83] text-white border-b border-[#003d66] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -73,7 +73,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
           <div className="flex items-center space-x-3">
             <a
               href="#/"
-              className="flex items-center space-x-3 group cursor-pointer text-white hover:opacity-95 transition-opacity"
+              className="focus-ring-invert rounded flex items-center space-x-3 group cursor-pointer text-white hover:opacity-95 transition-opacity"
             >
               {/* Trimble-inspired geometric logo tile */}
               <div className="relative w-8 h-8 rounded bg-[#003d66] border border-white/20 flex items-center justify-center shadow-xs">
@@ -99,7 +99,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             <a
               href="#/"
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
+              className={`focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
                 currentRoute === 'wizard'
                   ? 'bg-white text-[#004f83] shadow-xs'
                   : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -113,7 +113,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               <>
                 <a
                   href={`#/admin/${config.adminKey}`}
-                  className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                  className={`focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
                     currentRoute === 'admin'
                       ? 'bg-[#fbad26] text-[#252a2e] shadow-xs'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -125,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
 
                 <a
                   href={`#/event/${config.publicKey}`}
-                  className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                  className={`focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
                     currentRoute === 'staff'
                       ? 'bg-white text-[#004f83] shadow-xs'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -162,7 +162,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               <button
                 type="button"
                 onClick={handleGlobalExport}
-                className="hover:text-[#0063a3] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
+                className="focus-ring rounded hover:text-[#0063a3] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export ICS</span>
@@ -172,7 +172,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
             <button
               type="button"
               onClick={handleToggleSimulateConflict}
-              className={`transition-colors flex items-center space-x-1.5 px-2 py-1 rounded border text-[11px] cursor-pointer font-medium ${
+              className={`focus-ring transition-colors flex items-center space-x-1.5 px-2 py-1 rounded border text-[11px] cursor-pointer font-medium ${
                 isConflictArmed
                   ? 'bg-[#fef8e8] text-[#8a5800] border-[#fbad26] animate-pulse'
                   : 'hover:text-[#0063a3] text-[#46535e] border-[#d8dce0] bg-[#f8f9fa]'
@@ -186,7 +186,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
             <button
               type="button"
               onClick={handleReset}
-              className="hover:text-[#da3832] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
+              className="focus-ring rounded hover:text-[#da3832] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
               title="Reset data"
             >
               <RefreshCw className="w-3.5 h-3.5" />

@@ -91,7 +91,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ config, metrics }) => 
           <button
             type="button"
             onClick={() => copyToClipboard(staffUrl, 'staff')}
-            className="px-3.5 py-2 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white transition-colors flex items-center space-x-2 shadow-xs cursor-pointer"
+            className="focus-ring px-3.5 py-2 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white transition-colors flex items-center space-x-2 shadow-xs cursor-pointer"
           >
             {copiedType === 'staff' ? (
               <Check className="w-3.5 h-3.5 text-white" />
@@ -104,7 +104,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ config, metrics }) => 
           {/* Open Staff */}
           <a
             href={`#/event/${config.publicKey}`}
-            className="px-3 py-2 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] transition-colors flex items-center space-x-1.5 cursor-pointer"
+            className="focus-ring px-3 py-2 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] transition-colors flex items-center space-x-1.5 cursor-pointer"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Open Staff</span>
@@ -115,7 +115,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ config, metrics }) => 
           <button
             type="button"
             onClick={handleExportIcs}
-            className="px-3 py-2 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] transition-colors flex items-center space-x-1.5 cursor-pointer"
+            className="focus-ring px-3 py-2 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] transition-colors flex items-center space-x-1.5 cursor-pointer"
             title="Download RFC 5545 iCalendar (.ics)"
           >
             <Download className="w-3.5 h-3.5 text-[#7c878e]" />
@@ -126,7 +126,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ config, metrics }) => 
           <button
             type="button"
             onClick={() => copyToClipboard(adminUrl, 'admin')}
-            className="px-2.5 py-2 rounded text-xs font-mono text-[#46535e] hover:text-[#252a2e] bg-white border border-[#d8dce0] hover:border-[#7c878e] transition-colors flex items-center space-x-1 cursor-pointer"
+            className="focus-ring px-2.5 py-2 rounded text-xs font-mono text-[#46535e] hover:text-[#252a2e] bg-white border border-[#d8dce0] hover:border-[#7c878e] transition-colors flex items-center space-x-1 cursor-pointer"
             title="Copy secret Admin key link to bookmark"
           >
             {copiedType === 'admin' ? (

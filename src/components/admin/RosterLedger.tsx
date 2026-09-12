@@ -96,7 +96,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
               placeholder="Search staff..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white border border-[#d8dce0] text-xs text-[#252a2e] pl-8 pr-3 py-1.5 rounded focus:outline-hidden focus:border-[#0063a3] w-36 sm:w-44"
+              className="bg-white border border-[#d8dce0] text-xs text-[#252a2e] pl-8 pr-3 py-1.5 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] w-36 sm:w-44"
             />
           </div>
 
@@ -156,7 +156,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
             placeholder="Full Name (e.g. Maya Lin)"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:border-[#0063a3] placeholder:text-[#7c878e]"
+            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#7c878e]"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -165,7 +165,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
             placeholder="Email (optional, e.g. maya@company.com)"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
-            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:border-[#0063a3] placeholder:text-[#7c878e]"
+            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#7c878e]"
           />
         </div>
         <button

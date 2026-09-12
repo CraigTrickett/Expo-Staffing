@@ -85,13 +85,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
           <button
             type="button"
             onClick={resetToDemo}
-            className="px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors"
+            className="focus-ring px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors"
           >
             Load Demo Event
           </button>
           <a
             href="#/"
-            className="px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors"
+            className="focus-ring px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors"
           >
             Create New Event
           </a>
@@ -121,7 +121,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
           <button
             type="button"
             onClick={clearError}
-            className="text-[#da3832] hover:text-[#b0221d] p-1"
+            className="focus-ring rounded text-[#da3832] hover:text-[#b0221d] p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -145,7 +145,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
             type="button"
             onClick={() => setActiveTab('matrix')}
             className={cn(
-              'px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
+              'focus-ring px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
               activeTab === 'matrix'
                 ? 'bg-[#0063a3] text-white shadow-xs'
                 : 'bg-white text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
@@ -165,7 +165,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
             type="button"
             onClick={() => setActiveTab('roster')}
             className={cn(
-              'px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
+              'focus-ring px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
               activeTab === 'roster'
                 ? 'bg-[#0063a3] text-white shadow-xs'
                 : 'bg-white text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
@@ -185,7 +185,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
         {/* Action button: Staff picker shortcut */}
         <a
           href={`#/event/${currentEvent.publicKey}`}
-          className="inline-flex items-center space-x-1.5 text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors"
+          className="focus-ring rounded inline-flex items-center space-x-1.5 text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors"
         >
           <span>Open Staff</span>
           <ExternalLink className="w-3.5 h-3.5" />
@@ -254,7 +254,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
               <button
                 type="button"
                 onClick={() => setSelectedSlotForAssign(null)}
-                className="p-1 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6]"
+                className="focus-ring p-1 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -271,7 +271,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
                   type="button"
                   disabled={activeSlot.capacity <= 1}
                   onClick={() => updateSlotCapacity(activeSlot.id, activeSlot.capacity - 1)}
-                  className="w-7 h-7 rounded bg-white hover:bg-[#f1f3f6] border border-[#d8dce0] disabled:opacity-40 text-[#252a2e] font-bold flex items-center justify-center cursor-pointer"
+                  className="focus-ring w-7 h-7 rounded bg-white hover:bg-[#f1f3f6] border border-[#d8dce0] disabled:opacity-40 text-[#252a2e] font-bold flex items-center justify-center cursor-pointer"
                 >
                   -
                 </button>
@@ -282,7 +282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
                   type="button"
                   disabled={activeSlot.capacity >= 8}
                   onClick={() => updateSlotCapacity(activeSlot.id, activeSlot.capacity + 1)}
-                  className="w-7 h-7 rounded bg-white hover:bg-[#f1f3f6] border border-[#d8dce0] disabled:opacity-40 text-[#252a2e] font-bold flex items-center justify-center cursor-pointer"
+                  className="focus-ring w-7 h-7 rounded bg-white hover:bg-[#f1f3f6] border border-[#d8dce0] disabled:opacity-40 text-[#252a2e] font-bold flex items-center justify-center cursor-pointer"
                 >
                   +
                 </button>
@@ -320,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
                       <button
                         type="button"
                         onClick={() => adminRemoveStaffFromSlot(activeSlot.id, booking.staffId)}
-                        className="px-2 py-1 text-[11px] text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors font-semibold cursor-pointer"
+                        className="focus-ring px-2 py-1 text-[11px] text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors font-semibold cursor-pointer"
                       >
                         Remove
                       </button>
@@ -344,7 +344,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
                         key={member.id}
                         type="button"
                         onClick={() => adminAssignStaffToSlot(activeSlot.id, member)}
-                        className="w-full flex items-center justify-between p-2 rounded bg-white hover:bg-[#e5f2f8] hover:border-[#0063a3] border border-[#d8dce0] text-left transition-colors group cursor-pointer"
+                        className="focus-ring w-full flex items-center justify-between p-2 rounded bg-white hover:bg-[#e5f2f8] hover:border-[#0063a3] border border-[#d8dce0] text-left transition-colors group cursor-pointer"
                       >
                         <div>
                           <div className="text-xs font-semibold text-[#252a2e] group-hover:text-[#0063a3]">
@@ -367,7 +367,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
               <button
                 type="button"
                 onClick={() => setSelectedSlotForAssign(null)}
-                className="px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-semibold rounded shadow-xs cursor-pointer"
+                className="focus-ring px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-semibold rounded shadow-xs cursor-pointer"
               >
                 Done
               </button>

@@ -61,7 +61,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
+            className="focus-ring p-1 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -107,7 +107,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer"
+            className="focus-ring px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer"
           >
             Keep Shift
           </button>
@@ -115,7 +115,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-[#da3832] hover:bg-[#b0221d] active:scale-98 text-white rounded text-xs font-semibold shadow-xs flex items-center space-x-1.5 transition-colors cursor-pointer"
+            className="focus-ring px-4 py-2 bg-[#da3832] hover:bg-[#b0221d] active:scale-98 text-white rounded text-xs font-semibold shadow-xs flex items-center space-x-1.5 transition-colors cursor-pointer"
           >
             {isSubmitting ? (
               <span>Releasing...</span>

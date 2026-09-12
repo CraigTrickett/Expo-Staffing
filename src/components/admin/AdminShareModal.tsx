@@ -106,7 +106,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               type="text"
               readOnly
               value={publicUrl}
-              className="flex-1 bg-white border border-[#d8dce0] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden focus:border-[#0063a3] select-all"
+              className="flex-1 bg-white border border-[#d8dce0] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] select-all"
             />
             <button
               type="button"
@@ -251,7 +251,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               type="text"
               readOnly
               value={adminUrl}
-              className="flex-1 bg-white border border-[#f7c970] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden select-all"
+              className="flex-1 bg-white border border-[#f7c970] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#fbad26]/30 select-all"
             />
             <button
               type="button"

@@ -134,7 +134,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
   if (!currentEvent) {
     return (
       <div className="max-w-xl mx-auto py-20 px-4 text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#fef8e8] border border-[#f7c970] text-[#8a5800] flex items-center justify-center mx-auto">
+        <div className="w-14 h-14 rounded bg-[#fef8e8] border border-[#f7c970] text-[#fbad26] flex items-center justify-center mx-auto">
           <AlertCircle className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-[#252a2e]">Event Schedule Not Found</h2>
@@ -145,7 +145,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
           <button
             type="button"
             onClick={resetToDemo}
-            className="px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="focus-ring px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             Load Demo Schedule
           </button>
@@ -176,7 +176,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
             <button
               type="button"
               onClick={clearError}
-              className="text-[#da3832] hover:text-[#b0221d] p-1 cursor-pointer"
+              className="focus-ring rounded text-[#da3832] hover:text-[#b0221d] p-1 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -273,7 +273,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
           <button
             type="button"
             onClick={() => setShowSyncModal(true)}
-            className="w-full bg-[#0063a3] hover:bg-[#005084] active:scale-98 text-white p-3.5 rounded shadow-modus-3 border border-[#005084] flex items-center justify-between transition-colors group cursor-pointer"
+            className="focus-ring w-full bg-[#0063a3] hover:bg-[#005084] active:scale-98 text-white p-3.5 rounded shadow-modus-3 border border-[#005084] flex items-center justify-between transition-colors group cursor-pointer"
           >
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded bg-white/20 flex items-center justify-center font-bold text-xs">
