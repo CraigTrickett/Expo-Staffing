@@ -38,7 +38,6 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
     isLoading,
     error,
     loadEventByKey,
-    refreshFromRemote,
     claimIdentity,
     claimShift,
     releaseShift,
@@ -53,15 +52,6 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
   useEffect(() => {
     loadEventByKey(publicKey);
   }, [publicKey, loadEventByKey]);
-
-  // Poll for changes made by other staff on other devices. Only does
-  // anything when a remote backend is configured; a no-op otherwise.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshFromRemote();
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [refreshFromRemote]);
 
   // Find all shifts booked by current staff
   const myBookedShifts: { slot: TimeSlot; booking: ShiftBooking }[] = [];

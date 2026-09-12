@@ -1,0 +1,21 @@
+// Expo Staffing — Firestore security rules
+//
+// Deploy with: firebase deploy --only firestore:rules
+// (or paste into Firebase Console → Firestore Database → Rules)
+//
+// This app has no user accounts — access is controlled entirely by
+// possession of the admin/public key (the "zero-login" model), so these
+// rules allow any client to read/write the boothEvents collection. That
+// matches the app's design but is not a substitute for real
+// authentication; if you need stronger guarantees later, add Firebase
+// Auth and scope these rules to authenticated event owners instead.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /boothEvents/{eventId} {
+      allow read, write: if true;
+    }
+  }
+}

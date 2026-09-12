@@ -38,7 +38,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
     isLoading,
     error,
     loadEventByKey,
-    refreshFromRemote,
     addRosterMember,
     removeRosterMember,
     updateSlotCapacity,
@@ -57,15 +56,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
   useEffect(() => {
     loadEventByKey(adminKey);
   }, [adminKey, loadEventByKey]);
-
-  // Poll for changes made by other admins/staff on other devices. Only
-  // does anything when a remote backend is configured; a no-op otherwise.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshFromRemote();
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [refreshFromRemote]);
 
   // Keep selected slot updated with state changes
   const activeSlot = selectedSlotForAssign

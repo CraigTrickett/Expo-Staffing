@@ -15,7 +15,7 @@ import {
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
 import { storage } from '@/lib/storage';
-import { remoteClaimShiftGuard, fetchEventByKey, pushEventToSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { remoteClaimShiftGuard, fetchEventByKey, pushEventToFirebase, isFirebaseConfigured, subscribeToEvent } from '@/lib/firebase';
 import { toast } from '@/components/common/Toast';
 
 interface EventStoreState {
@@ -43,7 +43,6 @@ interface EventStoreState {
   adminRemoveStaffFromSlot: (slotId: string, staffId: string) => void;
   clearError: () => void;
   resetToDemo: () => void;
-  refreshFromRemote: () => Promise<void>;
   isRemoteConfigured: () => boolean;
 }
 
@@ -82,21 +81,63 @@ function recalculateStaffHours(slots: TimeSlot[], roster: StaffMember[]): StaffM
  * Fire-and-forget push to the remote backend (when configured). Never
  * awaited by callers — localStorage is always written first and remains
  * the source of truth for the current tab; this just keeps other
- * devices in sync. Failures are logged inside pushEventToSupabase itself.
+ * devices in sync. Failures are logged inside pushEventToFirebase itself.
  */
 function syncToRemote(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
-  if (!isSupabaseConfigured) return;
-  void pushEventToSupabase({ config, slots, roster });
+  if (!isFirebaseConfigured) return;
+  void pushEventToFirebase({ config, slots, roster });
 }
 
 /**
  * Returns a copy of the config with a fresh updatedAt. Every mutation that
- * changes slots or roster must call this — refreshFromRemote's staleness
- * check (and any other device's polling) depends entirely on updatedAt
- * actually advancing whenever the underlying data changes.
+ * changes slots or roster must call this — the "My Events" recovery panel
+ * sorts by updatedAt, so it needs to actually reflect the last real change.
  */
 function touchConfig(config: EventConfig): EventConfig {
   return { ...config, updatedAt: new Date().toISOString() };
+}
+
+let liveUnsubscribe: (() => void) | null = null;
+
+/**
+ * Subscribes to live Firestore updates for the given event so every
+ * device viewing it stays in sync within about a second, with no polling.
+ * Replaces any previous subscription (e.g. when switching events) and is
+ * a no-op when Firebase isn't configured.
+ */
+function attachLiveSync(
+  eventId: string,
+  set: (partial: Partial<EventStoreState>) => void,
+  get: () => EventStoreState
+): void {
+  if (liveUnsubscribe) {
+    liveUnsubscribe();
+    liveUnsubscribe = null;
+  }
+
+  const unsubscribe = subscribeToEvent(eventId, (data) => {
+    const { currentEvent, currentStaff } = get();
+    // Ignore snapshots for an event we've since navigated away from.
+    if (!currentEvent || currentEvent.id !== eventId) return;
+
+    const synchronizedRoster = recalculateStaffHours(data.slots, data.roster);
+    const normalizedSlots = data.slots.map(updateSlotDerivedState);
+    const metrics = calculateCoverage(normalizedSlots, synchronizedRoster);
+
+    storage.saveEvent({ config: data.config, slots: normalizedSlots, roster: synchronizedRoster });
+
+    set({
+      currentEvent: data.config,
+      slots: normalizedSlots,
+      roster: synchronizedRoster,
+      currentStaff: currentStaff
+        ? synchronizedRoster.find((m) => m.id === currentStaff.id) || currentStaff
+        : null,
+      metrics,
+    });
+  });
+
+  liveUnsubscribe = unsubscribe;
 }
 
 export const useEventStore = create<EventStoreState>((set, get) => ({
@@ -234,43 +275,12 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       role,
     });
 
+    attachLiveSync(data.config.id, set, get);
+
     return role;
   },
 
-  /**
-   * Re-fetches the current event from the remote backend (if configured)
-   * and merges it in when it's newer than what's currently shown. Used
-   * for lightweight polling so a schedule updates across devices without
-   * a manual refresh, without needing a persistent realtime subscription.
-   */
-  refreshFromRemote: async () => {
-    const { currentEvent, currentStaff } = get();
-    if (!currentEvent || !isSupabaseConfigured) return;
-
-    const remoteResult = await fetchEventByKey(currentEvent.adminKey);
-    if (!remoteResult) return;
-
-    const { data } = remoteResult;
-    if (data.config.updatedAt <= currentEvent.updatedAt) return;
-
-    const synchronizedRoster = recalculateStaffHours(data.slots, data.roster);
-    const normalizedSlots = data.slots.map(updateSlotDerivedState);
-    const metrics = calculateCoverage(normalizedSlots, synchronizedRoster);
-
-    storage.saveEvent({ config: data.config, slots: normalizedSlots, roster: synchronizedRoster });
-
-    set({
-      currentEvent: data.config,
-      slots: normalizedSlots,
-      roster: synchronizedRoster,
-      currentStaff: currentStaff
-        ? synchronizedRoster.find((m) => m.id === currentStaff.id) || currentStaff
-        : null,
-      metrics,
-    });
-  },
-
-  isRemoteConfigured: () => isSupabaseConfigured,
+  isRemoteConfigured: () => isFirebaseConfigured,
 
   claimIdentity: (staffId: string | 'new', newName?: string, newEmail?: string) => {
     const { currentEvent, roster, slots } = get();
@@ -406,7 +416,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     });
 
     try {
-      // Hybrid Concurrency Check (Supabase / simulated conflict)
+      // Hybrid Concurrency Check (Firebase / simulated conflict)
       const remoteCheck = await remoteClaimShiftGuard(
         currentEvent.id,
         slotId,

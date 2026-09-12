@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { downloadIcs, generateIcsFile } from '@/lib/calendar';
-import { concurrencyTester } from '@/lib/supabase';
+import { concurrencyTester } from '@/lib/firebase';
 import { ToastContainer, toast } from '@/components/common/Toast';
 
 interface LayoutProps {
