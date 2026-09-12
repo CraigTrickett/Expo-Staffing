@@ -13,6 +13,7 @@ import {
   type Firestore,
   type Unsubscribe,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable, type Functions } from 'firebase/functions';
 import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember } from '@/types';
 
 const COLLECTION = 'boothEvents';
@@ -37,6 +38,7 @@ export const isFirebaseConfigured = Boolean(
 
 let firebaseApp: FirebaseApp | null = null;
 let firestoreDb: Firestore | null = null;
+let functionsClient: Functions | null = null;
 
 function getDb(): Firestore | null {
   if (!isFirebaseConfigured) return null;
@@ -52,6 +54,66 @@ function getDb(): Firestore | null {
   }
 
   return firestoreDb;
+}
+
+function getFunctionsClient(): Functions | null {
+  if (!isFirebaseConfigured) return null;
+  if (!firebaseApp && !getDb()) return null; // ensures firebaseApp is initialized
+
+  if (!functionsClient && firebaseApp) {
+    try {
+      functionsClient = getFunctions(firebaseApp);
+    } catch (err) {
+      console.warn('[Firebase] Failed to initialize Functions client:', err);
+      return null;
+    }
+  }
+
+  return functionsClient;
+}
+
+/**
+ * Completes the "Connect Google Calendar" flow: hands the one-time OAuth
+ * authorization code from Google Identity Services to the
+ * exchangeGoogleAuthCode Cloud Function, which exchanges it for a refresh
+ * token and stores it server-side. Returns false on any failure (network,
+ * not configured, admin key mismatch, etc.) — callers should show a
+ * generic "couldn't connect" message rather than the raw error.
+ */
+export async function connectGoogleCalendar(
+  eventId: string,
+  adminKey: string,
+  code: string
+): Promise<boolean> {
+  const functions = getFunctionsClient();
+  if (!functions) return false;
+
+  try {
+    const callable = httpsCallable(functions, 'exchangeGoogleAuthCode');
+    await callable({ eventId, adminKey, code });
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] connectGoogleCalendar failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Disconnects Google Calendar for an event: deletes the stored refresh
+ * token server-side. Does not attempt to cancel already-created events.
+ */
+export async function disconnectGoogleCalendar(eventId: string, adminKey: string): Promise<boolean> {
+  const functions = getFunctionsClient();
+  if (!functions) return false;
+
+  try {
+    const callable = httpsCallable(functions, 'disconnectGoogleCalendar');
+    await callable({ eventId, adminKey });
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] disconnectGoogleCalendar failed:', err);
+    return false;
+  }
 }
 
 /**

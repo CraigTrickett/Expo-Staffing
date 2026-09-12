@@ -241,7 +241,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                 }}
                 className="focus-ring rounded text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors cursor-pointer"
               >
-                Open Roster Audit &rarr;
+                Open Staffing &rarr;
               </button>
             )}
             <button

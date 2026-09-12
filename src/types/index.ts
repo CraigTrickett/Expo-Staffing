@@ -16,6 +16,10 @@ export interface EventConfig {
   publicKey: string;
   createdAt: string;
   updatedAt: string;
+  // Client-visible connection status only — the actual OAuth refresh
+  // token is never sent to the browser; it lives in a Cloud Function's
+  // own restricted Firestore collection.
+  googleCalendarConnected?: boolean;
 }
 
 export interface StaffMember {
@@ -35,6 +39,10 @@ export interface ShiftBooking {
   staffEmail: string;
   bookedAt: string; // ISO string
   isOptimistic?: boolean;
+  // Set by the onEventWrite Cloud Function once it successfully creates a
+  // Google Calendar event for this booking; used to cancel that event if
+  // the booking is later released. Never set by the client directly.
+  googleCalendarEventId?: string;
 }
 
 export interface TimeSlot {

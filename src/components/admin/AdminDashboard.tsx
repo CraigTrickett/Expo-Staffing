@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { CoverageStats } from './CoverageStats';
+import { GoogleCalendarConnect } from './GoogleCalendarConnect';
 import { RosterLedger } from './RosterLedger';
 import { ZeroHourDrawer } from './ZeroHourDrawer';
 import { AdminShareModal } from './AdminShareModal';
@@ -129,6 +130,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
         </div>
       )}
 
+      {/* Google Calendar auto-invite connection */}
+      <GoogleCalendarConnect config={currentEvent} />
+
       {/* Header Stats Panel */}
       <CoverageStats
         config={currentEvent}
@@ -154,7 +158,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
             )}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>Shift Matrix Grid</span>
+            <span>Shifts</span>
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded font-mono',
               activeTab === 'matrix' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#46535e]'
@@ -174,7 +178,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
             )}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Roster Audit Ledger</span>
+            <span>Staffing</span>
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded font-mono',
               activeTab === 'roster' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#46535e]'
@@ -229,7 +233,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
         </div>
       )}
 
-      {/* Tab 2: Roster Audit Ledger */}
+      {/* Tab 2: Staffing */}
       {activeTab === 'roster' && (
         <RosterLedger
           roster={roster}

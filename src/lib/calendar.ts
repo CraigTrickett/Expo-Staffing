@@ -1,4 +1,5 @@
 import type { EventConfig, ShiftBooking, TimeSlot } from '@/types';
+import { zonedTimeToUtc, toIcsUtcString } from './timezone';
 
 /**
  * Escapes characters according to RFC 5545 section 3.3.11:
@@ -14,32 +15,13 @@ function escapeIcsText(text: string): string {
 }
 
 /**
- * Converts a date string (YYYY-MM-DD) and time string (HH:mm) into RFC 5545 UTC timestamp (YYYYMMDDTHHMMSSZ).
+ * Converts a date string (YYYY-MM-DD) and time string (HH:mm), as observed
+ * in the event's own timezone, into an RFC 5545 UTC timestamp
+ * (YYYYMMDDTHHMMSSZ). Correct regardless of which timezone the browser
+ * generating the file happens to be in.
  */
 export function formatIcsDateTime(dateStr: string, timeStr: string, timeZone?: string): string {
-  try {
-    const [year, month, day] = dateStr.split('-').map((v) => parseInt(v, 10));
-    const [hours, minutes] = timeStr.split(':').map((v) => parseInt(v, 10));
-
-    if (timeZone && timeZone.toUpperCase() !== 'UTC') {
-      // If a non-UTC timezone is specified, try constructing in that timezone if supported
-      try {
-        const testDate = new Date(`${dateStr}T${timeStr}:00`);
-        if (!Number.isNaN(testDate.getTime())) {
-          return testDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-        }
-      } catch {
-        // Fallback to UTC below
-      }
-    }
-
-    const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
-    return utcDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  } catch {
-    const cleanDate = dateStr.replace(/-/g, '');
-    const cleanTime = (timeStr.replace(/:/g, '') || '0000') + '00';
-    return `${cleanDate}T${cleanTime}Z`;
-  }
+  return toIcsUtcString(zonedTimeToUtc(dateStr, timeStr, timeZone));
 }
 
 /**

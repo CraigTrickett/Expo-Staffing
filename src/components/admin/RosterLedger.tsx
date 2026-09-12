@@ -76,7 +76,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
           <div className="flex items-center space-x-2">
             <Users className="w-4 h-4 text-[#0063a3]" />
             <h2 className="text-base font-bold text-[#252a2e] tracking-tight">
-              Roster Audit Ledger
+              Staffing
             </h2>
             <span className="text-xs bg-[#e7eaef] text-[#252a2e] font-mono px-2 py-0.5 rounded font-semibold">
               {roster.length} members

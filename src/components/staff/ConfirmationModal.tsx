@@ -15,6 +15,7 @@ import {
 import confetti from 'canvas-confetti';
 import type { EventConfig, ShiftBooking, StaffMember, TimeSlot } from '@/types';
 import { downloadStaffScheduleIcs } from '@/lib/calendar';
+import { zonedTimeToUtc, toIcsUtcString } from '@/lib/timezone';
 import { calculateSlotDurationMinutes, formatDuration, formatTime12h, formatDate } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
 
@@ -105,8 +106,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const handleGoogleCalendarSync = () => {
     if (myBookedShifts.length === 0) return;
     const first = myBookedShifts[0];
-    const startIso = `${first.slot.date.replace(/-/g, '')}T${first.slot.startTime.replace(/:/g, '')}00Z`;
-    const endIso = `${first.slot.date.replace(/-/g, '')}T${first.slot.endTime.replace(/:/g, '')}00Z`;
+    const startIso = toIcsUtcString(zonedTimeToUtc(first.slot.date, first.slot.startTime, config.timezone));
+    const endIso = toIcsUtcString(zonedTimeToUtc(first.slot.date, first.slot.endTime, config.timezone));
     const title = encodeURIComponent(`Expo Staffing: ${config.title}`);
     const details = encodeURIComponent(
       `Expo staffing shift for ${currentStaff.name}.\nEvent: ${config.title}\nLocation: ${config.location}`

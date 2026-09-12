@@ -17,5 +17,14 @@ service cloud.firestore {
     match /boothEvents/{eventId} {
       allow read, write: if true;
     }
+
+    // Google Calendar OAuth refresh tokens live here (written only by the
+    // exchangeGoogleAuthCode Cloud Function, read only by onEventWrite).
+    // No client, admin or otherwise, should ever read or write this
+    // collection directly — the default-deny below is intentional and
+    // must stay in place even if other rules in this file change.
+    match /organizerCalendarTokens/{eventId} {
+      allow read, write: if false;
+    }
   }
 }
