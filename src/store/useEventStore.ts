@@ -15,7 +15,7 @@ import {
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
 import { storage } from '@/lib/storage';
-import { remoteClaimShiftGuard } from '@/lib/supabase';
+import { remoteClaimShiftGuard, fetchEventByKey, pushEventToSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from '@/components/common/Toast';
 
 interface EventStoreState {
@@ -38,10 +38,13 @@ interface EventStoreState {
   addRosterMember: (name: string, email?: string) => StaffMember;
   removeRosterMember: (staffId: string) => void;
   updateSlotCapacity: (slotId: string, newCapacity: number) => void;
+  updateDefaultSlotCapacity: (newCapacity: number) => void;
   adminAssignStaffToSlot: (slotId: string, staff: StaffMember) => boolean;
   adminRemoveStaffFromSlot: (slotId: string, staffId: string) => void;
   clearError: () => void;
   resetToDemo: () => void;
+  refreshFromRemote: () => Promise<void>;
+  isRemoteConfigured: () => boolean;
 }
 
 const emptyMetrics: EventMetrics = {
@@ -51,6 +54,7 @@ const emptyMetrics: EventMetrics = {
   overallCoveragePercent: 0,
   unassignedStaffCount: 0,
   understaffedSlotCount: 0,
+  dynamicTargetHours: 0,
 };
 
 /**
@@ -72,6 +76,27 @@ function recalculateStaffHours(slots: TimeSlot[], roster: StaffMember[]): StaffM
     ...member,
     totalBookedHours: Math.round((hoursMap.get(member.id) || 0) * 10) / 10,
   }));
+}
+
+/**
+ * Fire-and-forget push to the remote backend (when configured). Never
+ * awaited by callers — localStorage is always written first and remains
+ * the source of truth for the current tab; this just keeps other
+ * devices in sync. Failures are logged inside pushEventToSupabase itself.
+ */
+function syncToRemote(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
+  if (!isSupabaseConfigured) return;
+  void pushEventToSupabase({ config, slots, roster });
+}
+
+/**
+ * Returns a copy of the config with a fresh updatedAt. Every mutation that
+ * changes slots or roster must call this — refreshFromRemote's staleness
+ * check (and any other device's polling) depends entirely on updatedAt
+ * actually advancing whenever the underlying data changes.
+ */
+function touchConfig(config: EventConfig): EventConfig {
+  return { ...config, updatedAt: new Date().toISOString() };
 }
 
 export const useEventStore = create<EventStoreState>((set, get) => ({
@@ -96,7 +121,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       description:
         payload.description?.trim() ||
         `Expo staffing schedule for ${payload.title.trim()}. Self-service shift signup powered by Expo Staffing.`,
-      location: payload.location?.trim() || 'Conference Main Expo Hall',
+      location: payload.location?.trim() || '',
       timezone: payload.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles',
       startDate: payload.startDate,
       endDate: payload.endDate,
@@ -104,7 +129,6 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       dailyEndTime: payload.dailyEndTime,
       slotDurationMinutes: payload.slotDurationMinutes,
       staffCapacityPerSlot: Math.max(1, payload.staffCapacityPerSlot),
-      targetHoursPerStaff: Math.max(1, payload.targetHoursPerStaff),
       adminKey,
       publicKey,
       createdAt: new Date().toISOString(),
@@ -118,8 +142,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
         id: `staff_${generateNanoKey()}_${idx}`,
         eventId,
         name,
-        email: `${name.toLowerCase().replace(/\s+/g, '.')}@booth.team`,
-        targetHours: newConfig.targetHoursPerStaff,
+        email: '',
         totalBookedHours: 0,
         isConfirmed: false,
       }));
@@ -134,6 +157,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots,
       roster: initialRoster,
     });
+    syncToRemote(newConfig, slots, initialRoster);
 
     set({
       currentEvent: newConfig,
@@ -160,7 +184,11 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     // Ensure demo event exists if local storage is completely empty
     storage.initOrSeed();
 
-    const result = storage.getByKey(trimmed);
+    // Prefer the remote copy when a backend is configured, since it's
+    // the shared source of truth across devices. Fall back to whatever
+    // this browser already has locally (offline, or no backend set up).
+    const remoteResult = await fetchEventByKey(trimmed);
+    const result = remoteResult || storage.getByKey(trimmed);
 
     if (!result) {
       set({
@@ -180,6 +208,10 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     const synchronizedRoster = recalculateStaffHours(data.slots, data.roster);
     const normalizedSlots = data.slots.map(updateSlotDerivedState);
     const metrics = calculateCoverage(normalizedSlots, synchronizedRoster);
+
+    // Mirror whatever we loaded (remote or local) into this browser's
+    // local cache, so it's still usable offline next time.
+    storage.saveEvent({ config: data.config, slots: normalizedSlots, roster: synchronizedRoster });
 
     // Retrieve previously selected identity for this event
     const savedStaffId = storage.getPersistedStaffId(data.config.id);
@@ -205,6 +237,41 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     return role;
   },
 
+  /**
+   * Re-fetches the current event from the remote backend (if configured)
+   * and merges it in when it's newer than what's currently shown. Used
+   * for lightweight polling so a schedule updates across devices without
+   * a manual refresh, without needing a persistent realtime subscription.
+   */
+  refreshFromRemote: async () => {
+    const { currentEvent, currentStaff } = get();
+    if (!currentEvent || !isSupabaseConfigured) return;
+
+    const remoteResult = await fetchEventByKey(currentEvent.adminKey);
+    if (!remoteResult) return;
+
+    const { data } = remoteResult;
+    if (data.config.updatedAt <= currentEvent.updatedAt) return;
+
+    const synchronizedRoster = recalculateStaffHours(data.slots, data.roster);
+    const normalizedSlots = data.slots.map(updateSlotDerivedState);
+    const metrics = calculateCoverage(normalizedSlots, synchronizedRoster);
+
+    storage.saveEvent({ config: data.config, slots: normalizedSlots, roster: synchronizedRoster });
+
+    set({
+      currentEvent: data.config,
+      slots: normalizedSlots,
+      roster: synchronizedRoster,
+      currentStaff: currentStaff
+        ? synchronizedRoster.find((m) => m.id === currentStaff.id) || currentStaff
+        : null,
+      metrics,
+    });
+  },
+
+  isRemoteConfigured: () => isSupabaseConfigured,
+
   claimIdentity: (staffId: string | 'new', newName?: string, newEmail?: string) => {
     const { currentEvent, roster, slots } = get();
     if (!currentEvent) {
@@ -215,9 +282,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
 
     if (staffId === 'new' || !staffId) {
       const cleanName = (newName || 'New Representative').trim();
-      const cleanEmail = (
-        newEmail || `${cleanName.toLowerCase().replace(/\s+/g, '.')}@booth.team`
-      ).trim();
+      const cleanEmail = (newEmail || '').trim();
 
       // Check if already in roster by name or email
       const existing = roster.find(
@@ -234,17 +299,18 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
           eventId: currentEvent.id,
           name: cleanName,
           email: cleanEmail,
-          targetHours: currentEvent.targetHoursPerStaff,
           totalBookedHours: 0,
           isConfirmed: true,
         };
         const updatedRoster = [...roster, targetMember];
+        const nextConfig = touchConfig(currentEvent);
         storage.saveEvent({
-          config: currentEvent,
+          config: nextConfig,
           slots,
           roster: updatedRoster,
         });
-        set({ roster: updatedRoster });
+        syncToRemote(nextConfig, slots, updatedRoster);
+        set({ currentEvent: nextConfig, roster: updatedRoster });
       }
     } else {
       const found = roster.find((m) => m.id === staffId);
@@ -373,14 +439,16 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       }
 
       // Persist to storage
+      const nextConfig = touchConfig(currentEvent);
       storage.saveEvent({
-        config: currentEvent,
+        config: nextConfig,
         slots: nextSlots,
         roster: nextRoster,
       });
+      syncToRemote(nextConfig, nextSlots, nextRoster);
 
       // Clear optimistic rollback flag on success
-      set({ optimisticRollbackCache: null });
+      set({ currentEvent: nextConfig, optimisticRollbackCache: null });
       toast.success(
         `Claimed ${targetSlot.startTime} - ${targetSlot.endTime} shift!`,
         'Shift Confirmed'
@@ -450,11 +518,14 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     });
 
     try {
+      const nextConfig = touchConfig(currentEvent);
       storage.saveEvent({
-        config: currentEvent,
+        config: nextConfig,
         slots: nextSlots,
         roster: nextRoster,
       });
+      syncToRemote(nextConfig, nextSlots, nextRoster);
+      set({ currentEvent: nextConfig });
       return true;
     } catch (err) {
       console.error('[releaseShift] Failed to persist release:', err);
@@ -469,28 +540,29 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     }
 
     const cleanName = name.trim();
-    const cleanEmail = (email || `${cleanName.toLowerCase().replace(/\s+/g, '.')}@booth.team`).trim();
+    const cleanEmail = (email || '').trim();
 
     const newMember: StaffMember = {
       id: `staff_${generateNanoKey()}`,
       eventId: currentEvent.id,
       name: cleanName,
       email: cleanEmail,
-      targetHours: currentEvent.targetHoursPerStaff,
       totalBookedHours: 0,
       isConfirmed: false,
     };
 
     const nextRoster = [...roster, newMember];
     const nextMetrics = calculateCoverage(slots, nextRoster);
+    const nextConfig = touchConfig(currentEvent);
 
     storage.saveEvent({
-      config: currentEvent,
+      config: nextConfig,
       slots,
       roster: nextRoster,
     });
+    syncToRemote(nextConfig, slots, nextRoster);
 
-    set({ roster: nextRoster, metrics: nextMetrics, error: null });
+    set({ currentEvent: nextConfig, roster: nextRoster, metrics: nextMetrics, error: null });
     return newMember;
   },
 
@@ -518,13 +590,16 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       storage.setPersistedStaffId(currentEvent.id, null);
     }
 
+    const nextConfig = touchConfig(currentEvent);
     storage.saveEvent({
-      config: currentEvent,
+      config: nextConfig,
       slots: nextSlots,
       roster: nextRoster,
     });
+    syncToRemote(nextConfig, nextSlots, nextRoster);
 
     set({
+      currentEvent: nextConfig,
       slots: nextSlots,
       roster: nextRoster,
       currentStaff: updatedStaff,
@@ -547,14 +622,48 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     });
 
     const nextMetrics = calculateCoverage(nextSlots, roster);
+    const nextConfig = touchConfig(currentEvent);
 
     storage.saveEvent({
-      config: currentEvent,
+      config: nextConfig,
       slots: nextSlots,
       roster,
     });
+    syncToRemote(nextConfig, nextSlots, roster);
 
-    set({ slots: nextSlots, metrics: nextMetrics });
+    set({ currentEvent: nextConfig, slots: nextSlots, metrics: nextMetrics });
+  },
+
+  updateDefaultSlotCapacity: (newCapacity: number) => {
+    const { currentEvent, slots, roster } = get();
+    if (!currentEvent) return;
+
+    const safeCapacity = Math.max(1, Math.min(10, newCapacity));
+    const nextConfig: EventConfig = {
+      ...currentEvent,
+      staffCapacityPerSlot: safeCapacity,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Apply the new default to every existing slot as well, so the
+    // change is reflected immediately across the whole schedule.
+    const nextSlots = slots.map((slot) =>
+      updateSlotDerivedState({
+        ...slot,
+        capacity: safeCapacity,
+      })
+    );
+
+    const nextMetrics = calculateCoverage(nextSlots, roster);
+
+    storage.saveEvent({
+      config: nextConfig,
+      slots: nextSlots,
+      roster,
+    });
+    syncToRemote(nextConfig, nextSlots, roster);
+
+    set({ currentEvent: nextConfig, slots: nextSlots, metrics: nextMetrics });
   },
 
   adminAssignStaffToSlot: (slotId: string, staff: StaffMember): boolean => {
@@ -595,14 +704,16 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
 
     const nextRoster = recalculateStaffHours(nextSlots, roster);
     const nextMetrics = calculateCoverage(nextSlots, nextRoster);
+    const nextConfig = touchConfig(currentEvent);
 
     storage.saveEvent({
-      config: currentEvent,
+      config: nextConfig,
       slots: nextSlots,
       roster: nextRoster,
     });
+    syncToRemote(nextConfig, nextSlots, nextRoster);
 
-    set({ slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
+    set({ currentEvent: nextConfig, slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
     return true;
   },
 
@@ -622,14 +733,16 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
 
     const nextRoster = recalculateStaffHours(nextSlots, roster);
     const nextMetrics = calculateCoverage(nextSlots, nextRoster);
+    const nextConfig = touchConfig(currentEvent);
 
     storage.saveEvent({
-      config: currentEvent,
+      config: nextConfig,
       slots: nextSlots,
       roster: nextRoster,
     });
+    syncToRemote(nextConfig, nextSlots, nextRoster);
 
-    set({ slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
+    set({ currentEvent: nextConfig, slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
   },
 
   clearError: () => set({ error: null }),

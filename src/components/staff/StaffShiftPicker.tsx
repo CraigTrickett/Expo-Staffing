@@ -34,9 +34,11 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
     slots,
     roster,
     currentStaff,
+    metrics,
     isLoading,
     error,
     loadEventByKey,
+    refreshFromRemote,
     claimIdentity,
     claimShift,
     releaseShift,
@@ -51,6 +53,15 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
   useEffect(() => {
     loadEventByKey(publicKey);
   }, [publicKey, loadEventByKey]);
+
+  // Poll for changes made by other staff on other devices. Only does
+  // anything when a remote backend is configured; a no-op otherwise.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshFromRemote();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [refreshFromRemote]);
 
   // Find all shifts booked by current staff
   const myBookedShifts: { slot: TimeSlot; booking: ShiftBooking }[] = [];
@@ -96,7 +107,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
     // If target hours achieved after this claim, trigger confetti
     if (success && currentEvent) {
       const updatedStaff = useEventStore.getState().currentStaff;
-      if (updatedStaff && updatedStaff.totalBookedHours >= currentEvent.targetHoursPerStaff) {
+      if (updatedStaff && updatedStaff.totalBookedHours >= metrics.dynamicTargetHours) {
         try {
           confetti({
             particleCount: 80,
@@ -160,7 +171,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
       <IdentityBar
         roster={roster}
         currentStaff={currentStaff}
-        targetHours={currentEvent.targetHoursPerStaff}
+        targetHours={metrics.dynamicTargetHours}
         onSelectStaff={(staffId) => claimIdentity(staffId)}
         onAddNewStaff={(name, email) => claimIdentity('new', name, email)}
       />
@@ -191,7 +202,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
                 Expo Staffing Shift Picker
               </span>
               <span className="text-xs text-[#46535e] font-mono font-semibold">
-                Target: {currentEvent.targetHoursPerStaff}h per person
+                Target: {metrics.dynamicTargetHours}h per person
               </span>
             </div>
             <h1 className="text-2xl font-bold text-[#252a2e] tracking-tight mt-1">
@@ -255,6 +266,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
           slots={slots}
           config={currentEvent}
           currentIdentity={currentStaff}
+          targetHours={metrics.dynamicTargetHours}
           isAdmin={false}
           onSlotClick={handleSlotClick}
           onLeave={(slotId, staffId) => {
@@ -284,7 +296,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
                   {myBookedShifts.length} {myBookedShifts.length === 1 ? 'shift' : 'shifts'} booked ({currentStaff.totalBookedHours} hrs)
                 </div>
                 <div className="text-[11px] text-[#b9dcf0]">
-                  Target: {currentEvent.targetHoursPerStaff} hrs &bull; Click to view & sync calendar
+                  Target: {metrics.dynamicTargetHours} hrs &bull; Click to view & sync calendar
                 </div>
               </div>
             </div>
@@ -318,6 +330,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
           config={currentEvent}
           slots={slots}
           currentStaff={currentStaff}
+          targetHours={metrics.dynamicTargetHours}
           onReleaseShift={(slot, booking) => {
             setSlotToCancel({ slot, booking });
           }}

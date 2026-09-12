@@ -6,6 +6,8 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  Minus,
+  Plus,
   Share2,
   Users,
 } from 'lucide-react';
@@ -20,6 +22,7 @@ interface CoverageStatsProps {
   onOpenZeroHoursDrawer: () => void;
   zeroHoursCount: number;
   onOpenShareModal?: () => void;
+  onUpdateDefaultCapacity?: (newCapacity: number) => void;
 }
 
 export const CoverageStats: React.FC<CoverageStatsProps> = ({
@@ -29,6 +32,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
   onOpenZeroHoursDrawer,
   zeroHoursCount,
   onOpenShareModal,
+  onUpdateDefaultCapacity,
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -263,11 +267,37 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#46535e]">Slot Capacity:</span>
-              <span className="font-mono font-semibold text-[#252a2e]">{config.staffCapacityPerSlot} staff/shift</span>
+              {onUpdateDefaultCapacity ? (
+                <div className="flex items-center bg-white border border-[#d8dce0] rounded">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateDefaultCapacity(config.staffCapacityPerSlot - 1)}
+                    disabled={config.staffCapacityPerSlot <= 1}
+                    className="focus-ring p-1 text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] disabled:opacity-40 disabled:cursor-not-allowed rounded-l cursor-pointer transition-colors"
+                    title="Decrease default slot capacity"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="font-mono font-semibold text-[#252a2e] px-1.5 min-w-[3.5rem] text-center">
+                    {config.staffCapacityPerSlot} staff/shift
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateDefaultCapacity(config.staffCapacityPerSlot + 1)}
+                    disabled={config.staffCapacityPerSlot >= 10}
+                    className="focus-ring p-1 text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] disabled:opacity-40 disabled:cursor-not-allowed rounded-r cursor-pointer transition-colors"
+                    title="Increase default slot capacity"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <span className="font-mono font-semibold text-[#252a2e]">{config.staffCapacityPerSlot} staff/shift</span>
+              )}
             </div>
           </div>
           <div className="text-[11px] text-[#7c878e]">
-            Target: {config.targetHoursPerStaff}h per rep
+            Target: {metrics.dynamicTargetHours}h per rep &bull; calculated from roster &amp; slots
           </div>
         </div>
       </div>

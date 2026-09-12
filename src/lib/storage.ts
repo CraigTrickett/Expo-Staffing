@@ -49,7 +49,6 @@ export function createDemoEvent(): StoredEventData {
     dailyEndTime: '17:00',
     slotDurationMinutes: 60,
     staffCapacityPerSlot: 2,
-    targetHoursPerStaff: 4,
     adminKey: DEMO_ADMIN_KEY,
     publicKey: DEMO_PUBLIC_KEY,
     createdAt: new Date().toISOString(),
@@ -62,7 +61,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: 'Sarah Chen',
       email: 'sarah.chen@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: true,
     },
@@ -71,7 +69,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: 'Marcus Vance',
       email: 'marcus.vance@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: true,
     },
@@ -80,7 +77,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: 'Elena Rostova',
       email: 'elena.rostova@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: true,
     },
@@ -89,7 +85,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: 'Dev Patel',
       email: 'dev.patel@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: true,
     },
@@ -98,7 +93,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: 'Zoe Washington',
       email: 'zoe.washington@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: false,
     },
@@ -107,7 +101,6 @@ export function createDemoEvent(): StoredEventData {
       eventId,
       name: "Liam O'Connor",
       email: 'liam.oconnor@saasdisrupt.io',
-      targetHours: 4,
       totalBookedHours: 0,
       isConfirmed: false,
     },
@@ -186,6 +179,20 @@ export const storage = {
   getById(eventId: string): StoredEventData | null {
     const all = this.getAll();
     return all[eventId] || null;
+  },
+
+  /**
+   * Lists every event this browser has created or loaded, most recently
+   * updated first. This is the basis of the "My Events" recovery panel —
+   * it only ever sees events this specific browser has touched, since
+   * there is no account system to recover across devices.
+   */
+  listLocalEvents(): EventConfig[] {
+    const all: Record<string, StoredEventData> = this.getAll();
+    return Object.values(all)
+      .map((evt) => evt.config)
+      .filter((config): config is EventConfig => Boolean(config))
+      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   },
 
   getByAdminKey(adminKey: string): StoredEventData | null {

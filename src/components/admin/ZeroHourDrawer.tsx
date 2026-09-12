@@ -21,6 +21,7 @@ interface ZeroHourDrawerProps {
   onClose: () => void;
   config: EventConfig;
   roster: StaffMember[];
+  targetHours: number;
   onNavigateToRoster?: () => void;
 }
 
@@ -29,6 +30,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
   onClose,
   config,
   roster,
+  targetHours,
   onNavigateToRoster,
 }) => {
   const [copiedSlack, setCopiedSlack] = useState(false);
@@ -40,7 +42,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
   const publicUrl = `${window.location.origin}${window.location.pathname}#/event/${config.publicKey}`;
 
   // Slack reminder format specified by user prompt
-  const slackMessage = `Hey team! We still have open expo floor slots for ${config.title}. If you haven't claimed your required ${config.targetHoursPerStaff} hours yet, please grab your shifts here: ${publicUrl} - Thanks!`;
+  const slackMessage = `Hey team! We still have open expo floor slots for ${config.title}. If you haven't claimed your required ${targetHours} hours yet, please grab your shifts here: ${publicUrl} - Thanks!`;
 
   const handleCopySlackNudge = () => {
     navigator.clipboard.writeText(slackMessage);
@@ -50,7 +52,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
   };
 
   const handleCopyIndividualNudge = (member: StaffMember) => {
-    const individualMsg = `Hi ${member.name}! Just a quick nudge regarding ${config.title}: you haven't claimed your required ${config.targetHoursPerStaff} hours for expo staffing yet. Please pick your slots here: ${publicUrl}`;
+    const individualMsg = `Hi ${member.name}! Just a quick nudge regarding ${config.title}: you haven't claimed your required ${targetHours} hours for expo staffing yet. Please pick your slots here: ${publicUrl}`;
     navigator.clipboard.writeText(individualMsg);
     setCopiedIndividualId(member.id);
     toast.success(`Direct reminder for ${member.name} copied!`, 'Copied');
@@ -64,7 +66,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
       return;
     }
     const subject = `Expo Staffing Reminder: ${config.title}`;
-    const body = `Hi everyone,\n\nWe are organizing the staff schedule for ${config.title} at ${config.location}.\n\nEach team member is asked to commit to ${config.targetHoursPerStaff} hours on the expo floor.\n\nPlease claim your open shifts using this self-service link:\n${publicUrl}\n\nThank you!`;
+    const body = `Hi everyone,\n\nWe are organizing the staff schedule for ${config.title} at ${config.location}.\n\nEach team member is asked to commit to ${targetHours} hours on the expo floor.\n\nPlease claim your open shifts using this self-service link:\n${publicUrl}\n\nThank you!`;
     window.location.href = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
@@ -188,9 +190,11 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                         0.0h
                       </span>
                     </div>
-                    <div className="text-[11px] text-[#7c878e] font-mono truncate mt-0.5">
-                      {member.email}
-                    </div>
+                    {member.email && (
+                      <div className="text-[11px] text-[#7c878e] font-mono truncate mt-0.5">
+                        {member.email}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-1 shrink-0">
@@ -211,13 +215,15 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                         <Copy className="w-3.5 h-3.5" />
                       )}
                     </button>
-                    <a
-                      href={`mailto:${member.email}?subject=${encodeURIComponent(`Expo Staffing Shifts: ${config.title}`)}&body=${encodeURIComponent(`Hi ${member.name},\n\nPlease grab your expo staffing shifts here:\n${publicUrl}`)}`}
-                      className="focus-ring p-2 bg-white text-[#46535e] hover:text-[#0063a3] hover:bg-[#f1f3f6] border border-[#d8dce0] rounded text-xs transition-colors"
-                      title={`Send email reminder to ${member.name}`}
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                    </a>
+                    {member.email && (
+                      <a
+                        href={`mailto:${member.email}?subject=${encodeURIComponent(`Expo Staffing Shifts: ${config.title}`)}&body=${encodeURIComponent(`Hi ${member.name},\n\nPlease grab your expo staffing shifts here:\n${publicUrl}`)}`}
+                        className="focus-ring p-2 bg-white text-[#46535e] hover:text-[#0063a3] hover:bg-[#f1f3f6] border border-[#d8dce0] rounded text-xs transition-colors"
+                        title={`Send email reminder to ${member.name}`}
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               ))

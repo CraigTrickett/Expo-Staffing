@@ -13,18 +13,19 @@ import {
   FileText,
   MapPin,
   HelpCircle,
+  History,
 } from 'lucide-react';
-import type { EventConfig, SlotDuration } from '@/types';
-import { generateNanoKey, cn } from '@/lib/utils';
-import { useBoothDutyStore } from '@/store';
+import type { SlotDuration } from '@/types';
+import { cn } from '@/lib/utils';
 import { useEventStore } from '@/store/useEventStore';
+import { MyEventsPanel } from './MyEventsPanel';
 
 interface CreateEventWizardProps {
   onEventCreated?: (adminKey: string) => void;
 }
 
 export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCreated }) => {
-  const { createNewEvent } = useBoothDutyStore();
+  const [showMyEvents, setShowMyEvents] = useState(false);
 
   // Helper to compute default dates (tomorrow and day after)
   const today = new Date();
@@ -36,45 +37,36 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
   const formatDateInput = (d: Date) => d.toISOString().split('T')[0];
 
   // Form State
-  const [title, setTitle] = useState('AWS re:Invent Expo Booth #1420');
-  const [location, setLocation] = useState('Venetian Expo Hall, Las Vegas, NV');
+  const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
   const [startDate, setStartDate] = useState(formatDateInput(defaultStart));
   const [endDate, setEndDate] = useState(formatDateInput(defaultEnd));
   const [dailyStartTime, setDailyStartTime] = useState('09:00');
   const [dailyEndTime, setDailyEndTime] = useState('18:00');
   const [slotDurationMinutes, setSlotDurationMinutes] = useState<SlotDuration>(60);
   const [staffCapacityPerSlot, setStaffCapacityPerSlot] = useState(2);
-  const [targetHoursPerStaff, setTargetHoursPerStaff] = useState(4);
-  const [rosterRaw, setRosterRaw] = useState(
-    'Sarah Connor\nJohn Matrix\nEllen Ripley\nJames Holden\nNaomi Nagata'
-  );
+  const [rosterRaw, setRosterRaw] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Quick preset templates for rapid setup
   const applyPreset = (presetType: 'tech-expo' | 'single-day' | 'intensive') => {
     if (presetType === 'tech-expo') {
-      setTitle('CloudNative Summit Expo Booth #204');
       setDailyStartTime('09:00');
       setDailyEndTime('18:00');
       setSlotDurationMinutes(60);
       setStaffCapacityPerSlot(2);
-      setTargetHoursPerStaff(4);
     } else if (presetType === 'single-day') {
-      setTitle('Regional Career Fair Tech Booth');
       setEndDate(startDate);
       setDailyStartTime('10:00');
       setDailyEndTime('16:00');
       setSlotDurationMinutes(90);
       setStaffCapacityPerSlot(3);
-      setTargetHoursPerStaff(3);
     } else if (presetType === 'intensive') {
-      setTitle('MegaCon Developer Playground Booth #88');
       setDailyStartTime('08:30');
       setDailyEndTime('19:00');
       setSlotDurationMinutes(60);
       setStaffCapacityPerSlot(4);
-      setTargetHoursPerStaff(5);
     }
   };
 
@@ -99,29 +91,6 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
 
     setIsSubmitting(true);
 
-    const adminKey = generateNanoKey('adm');
-    const publicKey = generateNanoKey('pub');
-    const eventId = `evt_${generateNanoKey()}`;
-
-    const newConfig: EventConfig = {
-      id: eventId,
-      title: title.trim(),
-      description: `Expo staffing schedule for ${title.trim()}. Self-service shift signup powered by Expo Staffing.`,
-      location: location.trim() || 'Conference Main Expo Floor',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles',
-      startDate,
-      endDate,
-      dailyStartTime,
-      dailyEndTime,
-      slotDurationMinutes,
-      staffCapacityPerSlot: Math.max(1, staffCapacityPerSlot),
-      targetHoursPerStaff: Math.max(1, targetHoursPerStaff),
-      adminKey,
-      publicKey,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
     // Parse initial roster
     const rosterLines = rosterRaw
       .split(/[\n,]+/)
@@ -131,19 +100,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     // Save into Zustand Event Store (with localStorage multi-event persistence)
     const createdEvent = useEventStore.getState().createEvent({
       title,
-      location,
+      location: location.trim(),
       startDate,
       endDate,
       dailyStartTime,
       dailyEndTime,
       slotDurationMinutes,
       staffCapacityPerSlot,
-      targetHoursPerStaff,
       rosterNames: rosterLines,
     });
-
-    // Also sync legacy store
-    createNewEvent(newConfig, rosterLines);
 
     // Trigger callback or route directly to admin console
     if (onEventCreated) {
@@ -157,9 +122,19 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4">
       {/* Wizard Header Hero */}
       <div className="text-center space-y-3 mb-8">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
-          <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
-          <span>Zero Signups &bull; Shareable Link-Based Architecture</span>
+        <div className="flex items-center justify-center gap-2">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
+            <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
+            <span>Zero Signups &bull; Shareable Link-Based Architecture</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowMyEvents(true)}
+            className="focus-ring inline-flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Lost your link?</span>
+          </button>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#252a2e]">
           Create Expo Schedule
@@ -392,27 +367,17 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               <p className="text-[11px] text-[#7c878e] mt-1">Simultaneous reps per time block</p>
             </div>
 
-            {/* Target Hours Per Rep */}
+            {/* Target Hours Per Rep — now calculated automatically */}
             <div>
-              <label htmlFor="wizard-target-hours" className="block text-xs font-semibold text-[#252a2e] mb-1.5">
+              <label className="block text-xs font-semibold text-[#252a2e] mb-1.5">
                 Target Hours Per Rep
               </label>
-              <div className="relative">
-                <input
-                  id="wizard-target-hours"
-                  type="number"
-                  min={1}
-                  max={40}
-                  step={0.5}
-                  value={targetHoursPerStaff}
-                  onChange={(e) => setTargetHoursPerStaff(parseFloat(e.target.value) || 1)}
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono"
-                />
-                <span className="absolute right-3.5 top-2.5 text-xs text-[#7c878e] font-mono">
-                  hours
-                </span>
+              <div className="w-full bg-[#f8f9fa] border border-[#d8dce0] rounded px-3.5 py-2 text-sm text-[#46535e] flex items-center h-[38px]">
+                Calculated automatically
               </div>
-              <p className="text-[11px] text-[#7c878e] mt-1">Commitment target per attendee</p>
+              <p className="text-[11px] text-[#7c878e] mt-1">
+                Total required hours &divide; roster size, updated live as staff join
+              </p>
             </div>
           </div>
         </div>
@@ -461,6 +426,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
           </div>
         </div>
       </form>
+
+      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
     </div>
   );
 };

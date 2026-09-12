@@ -38,9 +38,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
     isLoading,
     error,
     loadEventByKey,
+    refreshFromRemote,
     addRosterMember,
     removeRosterMember,
     updateSlotCapacity,
+    updateDefaultSlotCapacity,
     adminAssignStaffToSlot,
     adminRemoveStaffFromSlot,
     clearError,
@@ -55,6 +57,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
   useEffect(() => {
     loadEventByKey(adminKey);
   }, [adminKey, loadEventByKey]);
+
+  // Poll for changes made by other admins/staff on other devices. Only
+  // does anything when a remote backend is configured; a no-op otherwise.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshFromRemote();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [refreshFromRemote]);
 
   // Keep selected slot updated with state changes
   const activeSlot = selectedSlotForAssign
@@ -136,6 +147,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
         zeroHoursCount={zeroHoursMembers.length}
         onOpenZeroHoursDrawer={() => setShowZeroHoursDrawer(true)}
         onOpenShareModal={() => setShowShareModal(true)}
+        onUpdateDefaultCapacity={updateDefaultSlotCapacity}
       />
 
       {/* View Switcher / Sub-navigation */}
@@ -219,6 +231,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
             slots={slots}
             config={currentEvent}
             currentIdentity={null}
+            targetHours={metrics.dynamicTargetHours}
             isAdmin={true}
             onSlotClick={handleSlotClick}
             onAdminRemove={(slotId, staffId) => adminRemoveStaffFromSlot(slotId, staffId)}
@@ -230,7 +243,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
       {activeTab === 'roster' && (
         <RosterLedger
           roster={roster}
-          targetHours={currentEvent.targetHoursPerStaff}
+          targetHours={metrics.dynamicTargetHours}
           onAddMember={addRosterMember}
           onRemoveMember={removeRosterMember}
         />
@@ -351,7 +364,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
                             {member.name}
                           </div>
                           <div className="text-[10px] text-[#7c878e]">
-                            {member.totalBookedHours}h booked / {member.targetHours}h target
+                            {member.totalBookedHours}h booked / {metrics.dynamicTargetHours}h target
                           </div>
                         </div>
                         <span className="text-[11px] font-semibold text-[#0063a3] group-hover:translate-x-0.5 transition-transform flex items-center">
@@ -382,6 +395,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
         onClose={() => setShowZeroHoursDrawer(false)}
         config={currentEvent}
         roster={roster}
+        targetHours={metrics.dynamicTargetHours}
         onNavigateToRoster={() => setActiveTab('roster')}
       />
 

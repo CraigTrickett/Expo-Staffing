@@ -12,7 +12,6 @@ export interface EventConfig {
   dailyEndTime: string; // HH:mm
   slotDurationMinutes: SlotDuration;
   staffCapacityPerSlot: number;
-  targetHoursPerStaff: number;
   adminKey: string;
   publicKey: string;
   createdAt: string;
@@ -24,7 +23,6 @@ export interface StaffMember {
   eventId: string;
   name: string;
   email: string;
-  targetHours: number;
   totalBookedHours: number;
   isConfirmed: boolean;
 }
@@ -78,7 +76,6 @@ export interface WizardPayload {
   dailyEndTime: string;
   slotDurationMinutes: SlotDuration;
   staffCapacityPerSlot: number;
-  targetHoursPerStaff: number;
   rosterNames?: string[];
 }
 

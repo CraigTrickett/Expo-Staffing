@@ -24,6 +24,7 @@ interface ConfirmationModalProps {
   config: EventConfig;
   slots: TimeSlot[];
   currentStaff: StaffMember;
+  targetHours: number;
   onReleaseShift?: (slot: TimeSlot, booking: ShiftBooking) => void;
 }
 
@@ -33,6 +34,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   config,
   slots,
   currentStaff,
+  targetHours,
   onReleaseShift,
 }) => {
   const [copiedSummary, setCopiedSummary] = useState(false);
@@ -114,7 +116,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     window.open(gCalUrl, '_blank');
   };
 
-  const meetsTarget = currentStaff.totalBookedHours >= config.targetHoursPerStaff;
+  const meetsTarget = currentStaff.totalBookedHours >= targetHours;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
@@ -138,7 +140,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               {currentStaff.name}&rsquo;s Expo Schedule
             </h3>
             <p className="text-xs text-[#46535e]">
-              {config.title} &bull; {myBookedShifts.length} {myBookedShifts.length === 1 ? 'shift' : 'shifts'} ({currentStaff.totalBookedHours} of {config.targetHoursPerStaff} hrs target)
+              {config.title} &bull; {myBookedShifts.length} {myBookedShifts.length === 1 ? 'shift' : 'shifts'} ({currentStaff.totalBookedHours} of {targetHours} hrs target)
             </p>
           </div>
 

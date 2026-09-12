@@ -8,6 +8,7 @@ interface ShiftMatrixProps {
   slots: TimeSlot[];
   config?: EventConfig;
   currentIdentity: StaffMember | null;
+  targetHours?: number;
   isAdmin?: boolean;
   onClaim?: (slotId: string) => void;
   onLeave?: (slotId: string, staffId: string) => void;
@@ -22,6 +23,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
   slots,
   config,
   currentIdentity,
+  targetHours = 0,
   isAdmin = false,
   onClaim,
   onLeave,
@@ -149,7 +151,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
             <span className="text-[#252a2e] font-bold">{currentIdentity.name}</span>
             <span>&bull;</span>
             <span className="font-mono text-[#0063a3] font-bold">
-              {currentIdentity.totalBookedHours}h / {currentIdentity.targetHours}h booked
+              {currentIdentity.totalBookedHours}h / {targetHours}h booked
             </span>
           </div>
         )}

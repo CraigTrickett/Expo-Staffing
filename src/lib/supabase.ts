@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { ShiftBooking, StoredEventData, TimeSlot } from '@/types';
+import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember } from '@/types';
 
 // Read optional Supabase environment credentials
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
@@ -33,7 +33,7 @@ export function getSupabaseClient(): SupabaseClient | null {
 }
 
 /**
- * Concurrency Testing Flag:
+ * Concurrency Testing Flag (dev/QA only — never exposed in production UI):
  * When enabled, the next shift claim will simulate a remote 409 Conflict
  * (as if another booth staff member tapped the exact same second).
  */
@@ -55,13 +55,92 @@ export interface RemoteClaimResult {
   status: 200 | 409 | 500;
   message?: string;
   conflict?: boolean;
-  updatedSlot?: TimeSlot;
+}
+
+interface BoothEventRow {
+  id: string;
+  admin_key: string;
+  public_key: string;
+  config: EventConfig;
+  slots: TimeSlot[];
+  roster: StaffMember[];
+  updated_at: string;
+}
+
+function rowToStoredEvent(row: BoothEventRow): StoredEventData {
+  return { config: row.config, slots: row.slots, roster: row.roster };
 }
 
 /**
- * Hybrid Shift Claim with 409 Conflict Protection:
- * Checks remote database (or simulation flag). If the slot has become full
- * or was already claimed by another user concurrently, returns a 409 conflict.
+ * Fetches a single event by its admin key or public key directly from
+ * Supabase. Returns null on a genuine "not found" as well as on any
+ * network/config failure — callers should fall back to local storage
+ * in either case, since this is the single source of truth only when
+ * reachable.
+ */
+export async function fetchEventByKey(
+  key: string
+): Promise<{ data: StoredEventData; role: 'admin' | 'staff' } | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('booth_events')
+      .select('*')
+      .or(`admin_key.eq.${key},public_key.eq.${key}`)
+      .maybeSingle<BoothEventRow>();
+
+    if (error || !data) {
+      if (error) console.warn('[Supabase] fetchEventByKey failed, falling back to local:', error.message);
+      return null;
+    }
+
+    const role: 'admin' | 'staff' = data.admin_key === key ? 'admin' : 'staff';
+    return { data: rowToStoredEvent(data), role };
+  } catch (err) {
+    console.warn('[Supabase] fetchEventByKey exception, falling back to local:', err);
+    return null;
+  }
+}
+
+/**
+ * Pushes the full current event state (config + slots + roster) to Supabase.
+ * Fire-and-forget from the caller's perspective: failures are logged but
+ * never block the local-first UX, since localStorage already has the
+ * authoritative local copy.
+ */
+export async function pushEventToSupabase(eventData: StoredEventData): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+
+  try {
+    const { error } = await client.from('booth_events').upsert({
+      id: eventData.config.id,
+      admin_key: eventData.config.adminKey,
+      public_key: eventData.config.publicKey,
+      config: eventData.config,
+      slots: eventData.slots,
+      roster: eventData.roster,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.warn('[Supabase] Event push failed:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] Event push exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Re-fetches the live event from Supabase immediately before a shift claim
+ * commits, to catch a real concurrent claim from another device. Falls
+ * back to optimistic local success when Supabase isn't configured or is
+ * unreachable, matching the app's offline-first design.
  */
 export async function remoteClaimShiftGuard(
   eventId: string,
@@ -69,9 +148,7 @@ export async function remoteClaimShiftGuard(
   booking: ShiftBooking,
   currentSlot: TimeSlot
 ): Promise<RemoteClaimResult> {
-  // Check if developer/user activated simulated 409 conflict
   if (simulateConflictFlag) {
-    // Reset simulation flag so subsequent attempts can succeed
     simulateConflictFlag = false;
     return {
       success: false,
@@ -83,98 +160,44 @@ export async function remoteClaimShiftGuard(
 
   const client = getSupabaseClient();
   if (!client) {
-    // Graceful offline/localStorage fallback: local checks pass
     return { success: true, status: 200 };
   }
 
   try {
-    // 1. Fetch live slot state from Supabase to ensure slot capacity hasn't been saturated
     const { data, error } = await client
-      .from('booth_slots')
-      .select('bookings, capacity')
-      .eq('id', slotId)
-      .eq('event_id', eventId)
-      .single();
+      .from('booth_events')
+      .select('slots')
+      .eq('id', eventId)
+      .maybeSingle<{ slots: TimeSlot[] }>();
 
-    if (error && error.code !== 'PGRST116') {
-      // Non-critical network warning, allow local optimistic persistence
-      console.warn('[Supabase Hybrid Sync] Remote check warning, proceeding locally:', error.message);
+    if (error) {
+      console.warn('[Supabase] Remote conflict check warning, proceeding locally:', error.message);
       return { success: true, status: 200 };
     }
 
-    if (data) {
-      const liveBookings: ShiftBooking[] = data.bookings || [];
-      const capacity: number = data.capacity || currentSlot.capacity;
+    const liveSlot = data?.slots?.find((s) => s.id === slotId) || currentSlot;
 
-      // 409 Conflict: Remote slot is already full!
-      if (liveBookings.length >= capacity) {
-        return {
-          success: false,
-          status: 409,
-          conflict: true,
-          message: 'Slot was just claimed by someone else! Matrix updated.',
-        };
-      }
+    if (liveSlot.bookings.length >= liveSlot.capacity) {
+      return {
+        success: false,
+        status: 409,
+        conflict: true,
+        message: 'Slot was just claimed by someone else! Matrix updated.',
+      };
+    }
 
-      // 409 Conflict: Staff member already booked remotely
-      if (liveBookings.some((b) => b.staffId === booking.staffId)) {
-        return {
-          success: false,
-          status: 409,
-          conflict: true,
-          message: 'You are already booked for this slot on another device.',
-        };
-      }
-
-      // Remote write
-      const updatedBookings = [...liveBookings, booking];
-      const { error: updateError } = await client
-        .from('booth_slots')
-        .update({ bookings: updatedBookings, updated_at: new Date().toISOString() })
-        .eq('id', slotId)
-        .eq('event_id', eventId);
-
-      if (updateError) {
-        return {
-          success: false,
-          status: 409,
-          conflict: true,
-          message: 'Slot was just claimed by someone else! Matrix updated.',
-        };
-      }
+    if (liveSlot.bookings.some((b) => b.staffId === booking.staffId)) {
+      return {
+        success: false,
+        status: 409,
+        conflict: true,
+        message: 'You are already booked for this slot on another device.',
+      };
     }
 
     return { success: true, status: 200 };
-  } catch (err: any) {
-    console.warn('[Supabase] Concurrency check caught exception:', err);
-    return { success: true, status: 200 };
-  }
-}
-
-/**
- * Hybrid Sync to Supabase for events (if configured)
- */
-export async function syncEventToSupabase(eventData: StoredEventData): Promise<boolean> {
-  const client = getSupabaseClient();
-  if (!client) return false;
-
-  try {
-    const { error } = await client.from('booth_events').upsert({
-      id: eventData.config.id,
-      title: eventData.config.title,
-      config: eventData.config,
-      slots: eventData.slots,
-      roster: eventData.roster,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.warn('[Supabase] Event sync failed:', error.message);
-      return false;
-    }
-    return true;
   } catch (err) {
-    console.warn('[Supabase] Event sync exception:', err);
-    return false;
+    console.warn('[Supabase] Concurrency check exception, proceeding locally:', err);
+    return { success: true, status: 200 };
   }
 }
