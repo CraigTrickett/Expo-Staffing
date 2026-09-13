@@ -117,6 +117,25 @@ export async function disconnectGoogleCalendar(eventId: string, adminKey: string
 }
 
 /**
+ * Permanently deletes an event from the database. Admin-key verified
+ * server-side. Does not attempt to cancel any Google Calendar invites
+ * already sent for bookings on this event.
+ */
+export async function deleteEventRemote(eventId: string, adminKey: string): Promise<boolean> {
+  const functions = getFunctionsClient();
+  if (!functions) return false;
+
+  try {
+    const callable = httpsCallable(functions, 'deleteEvent');
+    await callable({ eventId, adminKey });
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] deleteEventRemote failed:', err);
+    return false;
+  }
+}
+
+/**
  * Concurrency Testing Flag (dev/QA only — never exposed in production UI):
  * When enabled, the next shift claim will simulate a remote 409 Conflict
  * (as if another booth staff member tapped the exact same second).

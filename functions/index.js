@@ -102,6 +102,35 @@ exports.disconnectGoogleCalendar = onCall(async (request) => {
   return { connected: false };
 });
 
+/**
+ * Permanently deletes an event: its boothEvents document (config, slots,
+ * roster, bookings) and any stored Google Calendar OAuth token for it.
+ * Admin-key verified, same as the Calendar connect/disconnect functions.
+ * Does not attempt to cancel any calendar invites already sent for
+ * bookings on this event.
+ */
+exports.deleteEvent = onCall(async (request) => {
+  const { eventId, adminKey } = request.data || {};
+  if (!eventId || !adminKey) {
+    throw new HttpsError('invalid-argument', 'eventId and adminKey are required.');
+  }
+
+  const eventRef = db.collection(EVENTS_COLLECTION).doc(eventId);
+  const eventSnap = await eventRef.get();
+  if (!eventSnap.exists) {
+    // Already gone — treat as success so the caller's cleanup proceeds.
+    return { deleted: true };
+  }
+  if (eventSnap.data().adminKey !== adminKey) {
+    throw new HttpsError('permission-denied', 'Admin key does not match this event.');
+  }
+
+  await db.collection(TOKENS_COLLECTION).doc(eventId).delete();
+  await eventRef.delete();
+
+  return { deleted: true };
+});
+
 async function getAccessToken(refreshToken) {
   const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
