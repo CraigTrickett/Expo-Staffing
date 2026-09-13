@@ -153,6 +153,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
         <div className="flex-1 min-w-0">
           <input
             type="text"
+            maxLength={100}
             placeholder="Full Name (e.g. Maya Lin)"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
@@ -162,6 +163,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
         <div className="flex-1 min-w-0">
           <input
             type="email"
+            maxLength={254}
             placeholder="Email (optional, e.g. maya@company.com)"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}

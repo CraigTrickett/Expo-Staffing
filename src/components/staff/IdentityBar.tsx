@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import type { StaffMember } from '@/types';
+import { useModalA11y } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
 interface IdentityBarProps {
@@ -32,6 +33,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const addModalRef = useModalA11y(showAddModal, () => setShowAddModal(false));
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
 
@@ -252,7 +254,13 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
       {/* Add My Name Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-4">
+          <div
+            ref={addModalRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            className="bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-4 focus:outline-hidden"
+          >
             <div className="flex items-start justify-between border-b border-[#d8dce0] pb-3">
               <div>
                 <h3 className="text-base font-bold text-[#252a2e]">Join Expo Staffing Roster</h3>
@@ -278,6 +286,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   type="text"
                   required
                   autoFocus
+                  maxLength={100}
                   placeholder="e.g. Jordan Miller"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
@@ -291,6 +300,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                 </label>
                 <input
                   type="email"
+                  maxLength={254}
                   placeholder="e.g. jordan@company.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}

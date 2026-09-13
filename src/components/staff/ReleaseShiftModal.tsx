@@ -3,6 +3,7 @@ import { AlertCircle, Clock, MapPin, Trash2, User, X } from 'lucide-react';
 import type { ShiftBooking, TimeSlot } from '@/types';
 import { calculateSlotDurationMinutes, formatDuration, formatTime12h, formatDate } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
+import { useModalA11y } from '@/lib/hooks';
 
 interface ReleaseShiftModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
   onConfirmRelease,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const modalRef = useModalA11y(isOpen, onClose);
 
   if (!isOpen || !slot || !booking) return null;
 
@@ -40,7 +42,13 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white border border-[#d8dce0] rounded max-w-sm w-full p-6 space-y-4 shadow-modus-4 animate-in zoom-in-95 duration-150">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        className="bg-white border border-[#d8dce0] rounded max-w-sm w-full p-6 space-y-4 shadow-modus-4 animate-in zoom-in-95 duration-150 focus:outline-hidden"
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-[#d8dce0] pb-3">
           <div className="flex items-center space-x-2.5">

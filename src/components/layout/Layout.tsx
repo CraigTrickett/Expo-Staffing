@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Sparkles,
   RefreshCw,
@@ -7,23 +7,26 @@ import {
   Shield,
   Users,
   Download,
-  History,
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { downloadIcs, generateIcsFile } from '@/lib/calendar';
+import { subscribeToConnectivity, type ConnectivityStatus } from '@/lib/firebase';
 import { ToastContainer } from '@/components/common/Toast';
-import { MyEventsPanel } from '@/components/common/MyEventsPanel';
 
 interface LayoutProps {
   children: React.ReactNode;
   headerSlot?: React.ReactNode;
   currentRoute: string;
+  isAdminAuthenticated?: boolean;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute }) => {
-  const { currentEvent: config, slots, resetToDemo, isRemoteConfigured } = useEventStore();
-  const [showMyEvents, setShowMyEvents] = useState(false);
-  const remoteConnected = isRemoteConfigured();
+export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute, isAdminAuthenticated }) => {
+  const { currentEvent: config, slots, resetToDemo } = useEventStore();
+  const [connectivity, setConnectivity] = useState<ConnectivityStatus>('unknown');
+
+  useEffect(() => {
+    return subscribeToConnectivity(setConnectivity);
+  }, []);
 
   const handleGlobalExport = () => {
     if (!config) return;
@@ -65,22 +68,30 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
 
             <span
               className={`hidden sm:inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                remoteConnected
-                  ? 'bg-white/10 border-white/20 text-white'
-                  : 'bg-[#fbad26]/15 border-[#fbad26]/40 text-[#fef8e8]'
+                connectivity === 'error'
+                  ? 'bg-[#fdf2f2]/90 border-[#f5b5b3] text-[#fdecec]'
+                  : 'bg-white/10 border-white/20 text-white'
               }`}
               title={
-                remoteConnected
-                  ? 'Data syncs to a shared database — the same event is reachable from any device.'
-                  : 'No database connected — data is only saved in this browser and will not be visible from other devices.'
+                connectivity === 'connected'
+                  ? 'The database responded successfully just now — data syncs across devices.'
+                  : connectivity === 'error'
+                    ? 'The last attempt to reach the database failed. Changes may not be saved until connectivity is restored.'
+                    : 'Not yet confirmed whether the database is reachable in this session.'
               }
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  remoteConnected ? 'bg-[#4ade80]' : 'bg-[#fbad26]'
+                  connectivity === 'connected'
+                    ? 'bg-[#4ade80]'
+                    : connectivity === 'error'
+                      ? 'bg-[#da3832]'
+                      : 'bg-white/40'
                 }`}
               />
-              <span>{remoteConnected ? 'Synced' : 'Local only'}</span>
+              <span>
+                {connectivity === 'connected' ? 'Synced' : connectivity === 'error' ? 'Connection Issue' : 'Connecting...'}
+              </span>
             </span>
           </div>
 
@@ -97,15 +108,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Event</span>
             </a>
-
-            <button
-              type="button"
-              onClick={() => setShowMyEvents(true)}
-              className="focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer text-white/80 hover:text-white hover:bg-white/10"
-            >
-              <History className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">My Events</span>
-            </button>
 
             {config && (
               <>
@@ -163,23 +165,23 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={handleReset}
-              className="focus-ring rounded hover:text-[#da3832] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
-              title="Reset data"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset State</span>
-            </button>
+            {isAdminAuthenticated && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="focus-ring rounded hover:text-[#da3832] transition-colors flex items-center space-x-1 cursor-pointer font-medium"
+                title="Reset data"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reset State</span>
+              </button>
+            )}
           </div>
         </div>
       </footer>
 
       {/* Global Toast Notifications Container */}
       <ToastContainer />
-
-      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
     </div>
   );
 };

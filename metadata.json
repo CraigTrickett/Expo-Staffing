@@ -1,6 +1,6 @@
 {
   "name": "Expo Staffing",
-  "description": "Zero-login, link-based conference and expo booth scheduling application built with the Trimble Modus design system.",
+  "description": "Conference and expo booth scheduling application: staff join and claim shifts via a shared link with zero signups, admin access requires sign-in. Built with the Trimble Modus design system.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

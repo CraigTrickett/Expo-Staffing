@@ -15,6 +15,7 @@ import {
 import type { EventConfig, StaffMember } from '@/types';
 import { toast } from '@/components/common/Toast';
 import { cn } from '@/lib/utils';
+import { useModalA11y } from '@/lib/hooks';
 
 interface ZeroHourDrawerProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
 }) => {
   const [copiedSlack, setCopiedSlack] = useState(false);
   const [copiedIndividualId, setCopiedIndividualId] = useState<string | null>(null);
+  const modalRef = useModalA11y(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -79,7 +81,13 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white border-l border-[#d8dce0] shadow-modus-4 flex flex-col animate-in slide-in-from-right duration-200">
+        <div
+          ref={modalRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          className="w-screen max-w-md bg-white border-l border-[#d8dce0] shadow-modus-4 flex flex-col animate-in slide-in-from-right duration-200 focus:outline-hidden"
+        >
           {/* Header */}
           <div className="p-5 border-b border-[#d8dce0] flex items-start justify-between bg-[#f8f9fa]">
             <div className="space-y-1">

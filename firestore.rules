@@ -3,12 +3,17 @@
 // Deploy with: firebase deploy --only firestore:rules
 // (or paste into Firebase Console → Firestore Database → Rules)
 //
-// This app has no user accounts — access is controlled entirely by
-// possession of the admin/public key (the "zero-login" model), so these
-// rules allow any client to read/write the boothEvents collection. That
-// matches the app's design but is not a substitute for real
-// authentication; if you need stronger guarantees later, add Firebase
-// Auth and scope these rules to authenticated event owners instead.
+// Admin access now requires real Firebase Auth sign-in (see
+// FIREBASE_SETUP.md, "Enable admin login") — but that's enforced in the
+// app's Cloud Functions (exchangeGoogleAuthCode, disconnectGoogleCalendar,
+// deleteEvent, adminUpdateEvent all check request.auth server-side), not
+// here. These rules stay wide open on boothEvents because staff must be
+// able to claim/release shifts by writing directly to this same document
+// without logging in, and Firestore's rules language has no clean way to
+// allow "staff can edit bookings" while blocking "someone edits capacity"
+// on one shared document. Tightening that further would mean moving
+// bookings into their own subcollection — a real option later, not done
+// here.
 
 rules_version = '2';
 

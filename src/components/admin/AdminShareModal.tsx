@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  AlertTriangle,
   Check,
   Copy,
   ExternalLink,
@@ -14,6 +13,7 @@ import {
 import type { EventConfig } from '@/types';
 import { toast } from '@/components/common/Toast';
 import { cn } from '@/lib/utils';
+import { useModalA11y } from '@/lib/hooks';
 
 interface AdminShareModalProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
   const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
+  const modalRef = useModalA11y(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -40,7 +41,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
   const handleCopyAdmin = () => {
     navigator.clipboard.writeText(adminUrl);
     setCopiedAdmin(true);
-    toast.warning('Secret Admin URL copied! Do not share with standard expo staff.', 'Admin Key Copied');
+    toast.success('Admin link copied.', 'Link Copied');
     setTimeout(() => setCopiedAdmin(false), 2500);
   };
 
@@ -53,7 +54,13 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 animate-in zoom-in-95 duration-150">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        className="bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 animate-in zoom-in-95 duration-150 focus:outline-hidden"
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-[#d8dce0] pb-4">
           <div className="space-y-1">
@@ -69,7 +76,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               Share &ldquo;{config.title}&rdquo;
             </h3>
             <p className="text-xs text-[#46535e]">
-              Capability-based URLs: One for administration, one for staff self-service.
+              One link for staff self-service, one for you to reach this event's admin dashboard.
             </p>
           </div>
 
@@ -225,24 +232,26 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
           )}
         </div>
 
-        {/* Section 2: Secret Admin Link (Amber warning) */}
-        <div className="bg-[#fef8e8] border border-[#f7c970] rounded p-4 space-y-3">
+        {/* Section 2: Admin Link (informational — no longer a secret credential) */}
+        <div className="bg-[#e5f2f8] border border-[#b9dcf0] rounded p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="p-1 rounded bg-[#fdf0d2] text-[#8a5800]">
+              <span className="p-1 rounded bg-white text-[#0063a3]">
                 <Shield className="w-3.5 h-3.5" />
               </span>
-              <span className="text-xs font-bold text-[#8a5800]">Secret Admin URL</span>
+              <span className="text-xs font-bold text-[#0063a3]">Your Admin Link</span>
             </div>
-            <span className="text-[10px] uppercase font-bold text-[#8a5800] bg-[#fdf0d2] px-2 py-0.5 rounded border border-[#f7c970]">
-              Admin Only
+            <span className="text-[10px] uppercase font-bold text-[#0063a3] bg-white px-2 py-0.5 rounded border border-[#b9dcf0]">
+              Bookmark This
             </span>
           </div>
 
-          <div className="p-2.5 bg-white rounded border border-[#f7c970] text-[11px] text-[#8a5800] flex items-start space-x-2">
-            <AlertTriangle className="w-4 h-4 text-[#fbad26] shrink-0 mt-0.5" />
+          <div className="p-2.5 bg-white rounded border border-[#b9dcf0] text-[11px] text-[#252a2e] flex items-start space-x-2">
+            <Shield className="w-4 h-4 text-[#0063a3] shrink-0 mt-0.5" />
             <span>
-              <strong>Do not share with staff!</strong> Anyone with this URL can alter the roster, override shifts, reassign representatives, and change slot capacities.
+              This takes you straight to this event once you're signed in. Opening it without signing
+              in shows a login screen, not the dashboard — sharing it with staff by accident won't give
+              them admin access, but the staff link below is still the right one to send them.
             </span>
           </div>
 
@@ -251,7 +260,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               type="text"
               readOnly
               value={adminUrl}
-              className="flex-1 bg-white border border-[#f7c970] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#fbad26]/30 select-all"
+              className="flex-1 bg-white border border-[#b9dcf0] text-[#252a2e] text-xs font-mono px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/30 select-all"
             />
             <button
               type="button"
@@ -260,7 +269,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
                 'px-3.5 py-2 rounded text-xs font-semibold flex items-center space-x-1.5 transition-colors shrink-0 shadow-xs cursor-pointer',
                 copiedAdmin
                   ? 'bg-[#00823b] text-white'
-                  : 'bg-[#8a5800] hover:bg-[#6b4400] text-white'
+                  : 'bg-[#0063a3] hover:bg-[#005084] text-white'
               )}
             >
               {copiedAdmin ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}

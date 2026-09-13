@@ -90,7 +90,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     // Parse initial roster
     const rosterLines = rosterRaw
       .split(/[\n,]+/)
-      .map((s) => s.trim())
+      .map((s) => s.trim().slice(0, 100))
       .filter(Boolean);
 
     // Save into Zustand Event Store (with localStorage multi-event persistence)
@@ -120,7 +120,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
       <div className="text-center space-y-3 mb-8">
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
           <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
-          <span>Zero Signups &bull; Shareable Link-Based Architecture</span>
+          <span>Staff Join With Zero Signups &bull; Admin Sign-In Required</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#252a2e]">
           Create Expo Schedule
@@ -185,6 +185,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 id="wizard-event-name"
                 type="text"
                 required
+                maxLength={150}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., AWS re:Invent Expo Booth #1420"
@@ -201,6 +202,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 <input
                   id="wizard-location"
                   type="text"
+                  maxLength={200}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., Venetian Expo Hall, Las Vegas, NV (Booth 1420)"
@@ -384,6 +386,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
           <div>
             <textarea
               rows={3}
+              maxLength={5000}
               value={rosterRaw}
               onChange={(e) => setRosterRaw(e.target.value)}
               placeholder="Paste staff names (one per line or comma-separated)..."
@@ -408,7 +411,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
           </button>
           <div className="flex items-center justify-center space-x-2 text-xs text-[#7c878e] mt-3 text-center">
             <Shield className="w-3.5 h-3.5 text-[#00823b]" />
-            <span>Instant provisioning &bull; No password or user account required</span>
+            <span>Instant provisioning &bull; Staff join via your shared link, no account needed</span>
           </div>
         </div>
       </form>

@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Clock,
   ExternalLink,
+  History,
   Layers,
+  LogOut,
   Plus,
   RefreshCw,
   Sparkles,
@@ -23,14 +25,18 @@ import { RosterLedger } from './RosterLedger';
 import { ZeroHourDrawer } from './ZeroHourDrawer';
 import { AdminShareModal } from './AdminShareModal';
 import { ShiftMatrix } from '../grid/ShiftMatrix';
+import { MyEventsPanel } from '../common/MyEventsPanel';
+import { signOutAdmin } from '@/lib/firebase';
+import { useModalA11y } from '@/lib/hooks';
 import { cn, formatTime12h } from '@/lib/utils';
 import type { StaffMember, TimeSlot } from '@/types';
 
 interface AdminDashboardProps {
   adminKey: string;
+  adminEmail: string;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminEmail }) => {
   const {
     currentEvent,
     slots,
@@ -50,8 +56,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
   } = useEventStore();
 
   const [selectedSlotForAssign, setSelectedSlotForAssign] = useState<TimeSlot | null>(null);
+  const assignModalRef = useModalA11y(Boolean(selectedSlotForAssign), () => setSelectedSlotForAssign(null));
   const [showZeroHoursDrawer, setShowZeroHoursDrawer] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showMyEvents, setShowMyEvents] = useState(false);
   const [activeTab, setActiveTab] = useState<'matrix' | 'roster'>('matrix');
 
   useEffect(() => {
@@ -113,6 +121,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* Admin Session Bar */}
+      <div className="flex items-center justify-between text-xs text-[#46535e]">
+        <span>
+          Signed in as <span className="font-semibold text-[#252a2e]">{adminEmail}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMyEvents(true)}
+            className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer"
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>All Events</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => signOutAdmin()}
+            className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#da3832] border border-[#d8dce0] hover:border-[#f5b5b3] bg-white transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </div>
+
       {/* Global Error Banner */}
       {error && (
         <div className="bg-[#fdf2f2] border border-[#f5b5b3] text-[#da3832] px-4 py-3 rounded text-xs flex items-center justify-between shadow-xs">
@@ -129,6 +162,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
           </button>
         </div>
       )}
+
+      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
 
       {/* Google Calendar auto-invite connection */}
       <GoogleCalendarConnect config={currentEvent} />
@@ -246,7 +281,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
       {/* Admin Slot Quick-Assign & Capacity Modal */}
       {activeSlot && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-3">
+          <div
+            ref={assignModalRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            className="bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-3 focus:outline-hidden"
+          >
             {/* Header */}
             <div className="flex items-start justify-between border-b border-[#d8dce0] pb-3">
               <div>

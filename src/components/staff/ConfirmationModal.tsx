@@ -17,6 +17,7 @@ import { downloadStaffScheduleIcs } from '@/lib/calendar';
 import { zonedTimeToUtc, toIcsUtcString } from '@/lib/timezone';
 import { calculateSlotDurationMinutes, formatDuration, formatTime12h, formatDate } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
+import { useModalA11y } from '@/lib/hooks';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onReleaseShift,
 }) => {
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const modalRef = useModalA11y(isOpen, onClose);
 
   // Extract all shifts booked by this staff member
   const myBookedShifts: { slot: TimeSlot; booking: ShiftBooking }[] = [];
@@ -118,7 +120,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 animate-in zoom-in-95 duration-150">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        className="bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 animate-in zoom-in-95 duration-150 focus:outline-hidden"
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-[#d8dce0] pb-4">
           <div className="space-y-1">

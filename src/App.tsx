@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { CreateEventWizard } from '@/components/wizard/CreateEventWizard';
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { AdminLogin } from '@/components/admin/AdminLogin';
 import { StaffShiftPicker } from '@/components/staff/StaffShiftPicker';
 import { DatabaseRequiredScreen } from '@/components/common/DatabaseRequiredScreen';
 import { useEventStore } from '@/store/useEventStore';
-import { isFirebaseConfigured } from '@/lib/firebase';
+import { isFirebaseConfigured, subscribeToAdminAuth, fetchEventByKey } from '@/lib/firebase';
 import { DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY } from '@/lib/storage';
-import { ArrowRight, Calendar, Shield, Sparkles, Users } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { ArrowRight, Calendar, Loader2, Shield, Sparkles, Users } from 'lucide-react';
 
 type RouteState =
   | { name: 'wizard' }
@@ -33,6 +35,18 @@ function parseHashRoute(): RouteState {
 export default function App() {
   const [route, setRoute] = useState<RouteState>(parseHashRoute());
   const { currentEvent } = useEventStore();
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [demoStats, setDemoStats] = useState<{
+    title: string;
+    startDate: string;
+    endDate: string;
+    dailyStartTime: string;
+    dailyEndTime: string;
+    staffCapacityPerSlot: number;
+    rosterCount: number;
+  } | null>(null);
+  const [demoStatsFailed, setDemoStatsFailed] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -43,12 +57,52 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToAdminAuth((email) => {
+      setAdminEmail(email);
+      setAuthReady(true);
+    });
+    return () => unsubscribe?.();
+  }, []);
+
+  // The demo banner's stats must reflect the demo event's actual current
+  // state, not a fixed description — an admin can (and did, during
+  // testing) change its capacity or roster after creation, which would
+  // otherwise leave the landing page showing numbers that are no longer
+  // true.
+  useEffect(() => {
+    if (route.name !== 'wizard') return;
+    let cancelled = false;
+
+    fetchEventByKey(DEMO_ADMIN_KEY)
+      .then((result) => {
+        if (cancelled || !result) return;
+        const { config, roster } = result.data;
+        setDemoStats({
+          title: config.title,
+          startDate: config.startDate,
+          endDate: config.endDate,
+          dailyStartTime: config.dailyStartTime,
+          dailyEndTime: config.dailyEndTime,
+          staffCapacityPerSlot: config.staffCapacityPerSlot,
+          rosterCount: roster.length,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setDemoStatsFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [route.name]);
+
   if (!isFirebaseConfigured) {
     return <DatabaseRequiredScreen />;
   }
 
   return (
-    <Layout currentRoute={route.name}>
+    <Layout currentRoute={route.name} isAdminAuthenticated={Boolean(adminEmail)}>
       {route.name === 'wizard' && (
         <div className="space-y-6">
           {/* Quick Demo Event Launcher Banner */}
@@ -68,10 +122,20 @@ export default function App() {
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-[#252a2e] mt-0.5">
-                    Explore &ldquo;SaaS Disrupt Expo 2026&rdquo; Demo
+                    Explore &ldquo;{demoStats?.title || 'SaaS Disrupt Expo 2026'}&rdquo; Demo
                   </h3>
                   <p className="text-xs text-[#46535e] mt-0.5">
-                    2 days &bull; 09:00&ndash;17:00 &bull; 2-staff capacity &bull; 6-person roster preloaded
+                    {demoStats ? (
+                      <>
+                        {formatDate(demoStats.startDate)} &ndash; {formatDate(demoStats.endDate)} &bull;{' '}
+                        {demoStats.dailyStartTime}&ndash;{demoStats.dailyEndTime} &bull;{' '}
+                        {demoStats.staffCapacityPerSlot}-staff capacity &bull; {demoStats.rosterCount}-person roster
+                      </>
+                    ) : demoStatsFailed ? (
+                      'Details unavailable right now — the demo event still works, this is just a display issue.'
+                    ) : (
+                      'Loading current demo details...'
+                    )}
                   </p>
                 </div>
               </div>
@@ -95,16 +159,34 @@ export default function App() {
             </div>
           </div>
 
-          <CreateEventWizard
-            onEventCreated={(adminKey) => {
-              window.location.hash = `#/admin/${adminKey}`;
-            }}
-          />
+          {!authReady ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="w-6 h-6 animate-spin text-[#0063a3]" />
+            </div>
+          ) : adminEmail ? (
+            <CreateEventWizard
+              onEventCreated={(adminKey) => {
+                window.location.hash = `#/admin/${adminKey}`;
+              }}
+            />
+          ) : (
+            <AdminLogin />
+          )}
         </div>
       )}
 
       {route.name === 'admin' && (
-        <AdminDashboard adminKey={route.adminKey} />
+        <>
+          {!authReady ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="w-6 h-6 animate-spin text-[#0063a3]" />
+            </div>
+          ) : adminEmail ? (
+            <AdminDashboard adminKey={route.adminKey} adminEmail={adminEmail} />
+          ) : (
+            <AdminLogin />
+          )}
+        </>
       )}
 
       {route.name === 'staff' && (

@@ -17,30 +17,47 @@ const EVENTS_COLLECTION = 'boothEvents';
 // privileges) ever touch it. Never expose refresh tokens to the browser.
 const TOKENS_COLLECTION = 'organizerCalendarTokens';
 
+// Kept in sync with ALLOWED_ADMIN_EMAILS in src/lib/firebase.ts. This is
+// the real enforcement point — the client-side allowlist check is only a
+// UX convenience and could be bypassed by anyone calling these functions
+// directly, so every sensitive action re-checks the caller's verified
+// Firebase Auth identity here regardless of what the client claims.
+const ALLOWED_ADMIN_EMAILS = ['craig_trickett@trimble.com', 'craigtrickett@gmail.com'];
+
+/**
+ * Throws if the caller isn't authenticated as one of the allowed admin
+ * emails. request.auth is populated by Firebase from the caller's ID
+ * token — it cannot be forged by a client claiming to be someone else.
+ */
+function requireAdmin(request) {
+  const email = (request.auth && request.auth.token && request.auth.token.email || '').toLowerCase();
+  if (!request.auth || !ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email)) {
+    throw new HttpsError('permission-denied', 'You must be signed in as an authorized admin.');
+  }
+}
+
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
 /**
  * Exchanges a one-time Google OAuth authorization code (from the admin's
  * "Connect Google Calendar" button) for a refresh token, and stores that
- * token server-side only. The admin key proves the caller actually holds
- * admin access to this event before we do anything.
+ * token server-side only.
  */
 exports.exchangeGoogleAuthCode = onCall(
   { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI] },
   async (request) => {
-    const { eventId, adminKey, code } = request.data || {};
-    if (!eventId || !adminKey || !code) {
-      throw new HttpsError('invalid-argument', 'eventId, adminKey, and code are all required.');
+    requireAdmin(request);
+
+    const { eventId, code } = request.data || {};
+    if (!eventId || !code) {
+      throw new HttpsError('invalid-argument', 'eventId and code are required.');
     }
 
     const eventRef = db.collection(EVENTS_COLLECTION).doc(eventId);
     const eventSnap = await eventRef.get();
     if (!eventSnap.exists) {
       throw new HttpsError('not-found', 'Event not found.');
-    }
-    if (eventSnap.data().adminKey !== adminKey) {
-      throw new HttpsError('permission-denied', 'Admin key does not match this event.');
     }
 
     let tokenJson;
@@ -82,18 +99,17 @@ exports.exchangeGoogleAuthCode = onCall(
  * Does not attempt to cancel already-created calendar events.
  */
 exports.disconnectGoogleCalendar = onCall(async (request) => {
-  const { eventId, adminKey } = request.data || {};
-  if (!eventId || !adminKey) {
-    throw new HttpsError('invalid-argument', 'eventId and adminKey are required.');
+  requireAdmin(request);
+
+  const { eventId } = request.data || {};
+  if (!eventId) {
+    throw new HttpsError('invalid-argument', 'eventId is required.');
   }
 
   const eventRef = db.collection(EVENTS_COLLECTION).doc(eventId);
   const eventSnap = await eventRef.get();
   if (!eventSnap.exists) {
     throw new HttpsError('not-found', 'Event not found.');
-  }
-  if (eventSnap.data().adminKey !== adminKey) {
-    throw new HttpsError('permission-denied', 'Admin key does not match this event.');
   }
 
   await db.collection(TOKENS_COLLECTION).doc(eventId).delete();
@@ -105,14 +121,15 @@ exports.disconnectGoogleCalendar = onCall(async (request) => {
 /**
  * Permanently deletes an event: its boothEvents document (config, slots,
  * roster, bookings) and any stored Google Calendar OAuth token for it.
- * Admin-key verified, same as the Calendar connect/disconnect functions.
  * Does not attempt to cancel any calendar invites already sent for
  * bookings on this event.
  */
 exports.deleteEvent = onCall(async (request) => {
-  const { eventId, adminKey } = request.data || {};
-  if (!eventId || !adminKey) {
-    throw new HttpsError('invalid-argument', 'eventId and adminKey are required.');
+  requireAdmin(request);
+
+  const { eventId } = request.data || {};
+  if (!eventId) {
+    throw new HttpsError('invalid-argument', 'eventId is required.');
   }
 
   const eventRef = db.collection(EVENTS_COLLECTION).doc(eventId);
@@ -121,14 +138,39 @@ exports.deleteEvent = onCall(async (request) => {
     // Already gone — treat as success so the caller's cleanup proceeds.
     return { deleted: true };
   }
-  if (eventSnap.data().adminKey !== adminKey) {
-    throw new HttpsError('permission-denied', 'Admin key does not match this event.');
-  }
 
   await db.collection(TOKENS_COLLECTION).doc(eventId).delete();
   await eventRef.delete();
 
   return { deleted: true };
+});
+
+/**
+ * Persists an admin-only change (capacity, roster, slot assignment) to
+ * an event. The client computes the new config/slots/roster locally —
+ * same trust model as the existing staff-side claim/release sync — this
+ * function's job is purely to verify the caller is an authenticated
+ * admin before writing it, since a direct client-side Firestore write
+ * would have no way to check that.
+ */
+exports.adminUpdateEvent = onCall(async (request) => {
+  requireAdmin(request);
+
+  const { eventId, config, slots, roster } = request.data || {};
+  if (!eventId || !config || !slots || !roster) {
+    throw new HttpsError('invalid-argument', 'eventId, config, slots, and roster are all required.');
+  }
+
+  await db.collection(EVENTS_COLLECTION).doc(eventId).set({
+    adminKey: config.adminKey,
+    publicKey: config.publicKey,
+    config,
+    slots,
+    roster,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return { success: true };
 });
 
 async function getAccessToken(refreshToken) {

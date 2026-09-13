@@ -16,7 +16,7 @@ import {
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
 import { storage, DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY, createDemoEvent } from '@/lib/storage';
-import { remoteClaimShiftGuard, fetchEventByKey, pushEventToFirebase, isFirebaseConfigured, subscribeToEvent } from '@/lib/firebase';
+import { remoteClaimShiftGuard, fetchEventByKey, pushEventToFirebase, pushEventToFirebaseAsAdmin, subscribeToEvent } from '@/lib/firebase';
 import { toast } from '@/components/common/Toast';
 
 interface EventStoreState {
@@ -44,7 +44,6 @@ interface EventStoreState {
   adminRemoveStaffFromSlot: (slotId: string, staffId: string) => void;
   clearError: () => void;
   resetToDemo: () => void;
-  isRemoteConfigured: () => boolean;
 }
 
 const emptyMetrics: EventMetrics = {
@@ -93,6 +92,23 @@ function recalculateStaffHours(slots: TimeSlot[], roster: StaffMember[]): StaffM
  */
 function syncToRemote(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
   pushEventToFirebase({ config, slots, roster }).then((ok) => {
+    if (!ok) {
+      toast.error(
+        'Your last change could not be saved to the database. Check your connection and try again.',
+        'Not Saved'
+      );
+    }
+  });
+}
+
+/**
+ * Same as syncToRemote, but for admin-only mutations (capacity, roster,
+ * slot assignment): routed through the authenticated adminUpdateEvent
+ * Cloud Function instead of a direct client write, since those actions
+ * should only ever succeed for a signed-in, allowlisted admin.
+ */
+function syncToRemoteAsAdmin(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
+  pushEventToFirebaseAsAdmin({ config, slots, roster }).then((ok) => {
     if (!ok) {
       toast.error(
         'Your last change could not be saved to the database. Check your connection and try again.',
@@ -212,7 +228,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots,
       roster: initialRoster,
     });
-    syncToRemote(newConfig, slots, initialRoster);
+    syncToRemoteAsAdmin(newConfig, slots, initialRoster);
 
     set({
       currentEvent: newConfig,
@@ -314,8 +330,6 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
 
     return role;
   },
-
-  isRemoteConfigured: () => isFirebaseConfigured,
 
   claimIdentity: (staffId: string | 'new', newName?: string, newEmail?: string) => {
     const { currentEvent, roster, slots } = get();
@@ -605,7 +619,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots,
       roster: nextRoster,
     });
-    syncToRemote(nextConfig, slots, nextRoster);
+    syncToRemoteAsAdmin(nextConfig, slots, nextRoster);
 
     set({ currentEvent: nextConfig, roster: nextRoster, metrics: nextMetrics, error: null });
     return newMember;
@@ -641,7 +655,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots: nextSlots,
       roster: nextRoster,
     });
-    syncToRemote(nextConfig, nextSlots, nextRoster);
+    syncToRemoteAsAdmin(nextConfig, nextSlots, nextRoster);
 
     set({
       currentEvent: nextConfig,
@@ -674,7 +688,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots: nextSlots,
       roster,
     });
-    syncToRemote(nextConfig, nextSlots, roster);
+    syncToRemoteAsAdmin(nextConfig, nextSlots, roster);
 
     set({ currentEvent: nextConfig, slots: nextSlots, metrics: nextMetrics });
   },
@@ -706,7 +720,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots: nextSlots,
       roster,
     });
-    syncToRemote(nextConfig, nextSlots, roster);
+    syncToRemoteAsAdmin(nextConfig, nextSlots, roster);
 
     set({ currentEvent: nextConfig, slots: nextSlots, metrics: nextMetrics });
   },
@@ -756,7 +770,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots: nextSlots,
       roster: nextRoster,
     });
-    syncToRemote(nextConfig, nextSlots, nextRoster);
+    syncToRemoteAsAdmin(nextConfig, nextSlots, nextRoster);
 
     set({ currentEvent: nextConfig, slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
     return true;
@@ -785,7 +799,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       slots: nextSlots,
       roster: nextRoster,
     });
-    syncToRemote(nextConfig, nextSlots, nextRoster);
+    syncToRemoteAsAdmin(nextConfig, nextSlots, nextRoster);
 
     set({ currentEvent: nextConfig, slots: nextSlots, roster: nextRoster, metrics: nextMetrics, error: null });
   },
@@ -801,7 +815,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     // The demo event is reached via a fixed, well-known key pair from the
     // landing page banner — it must exist in the database like any other
     // event, not just this browser's local cache.
-    syncToRemote(demo.config, normalizedSlots, synchronizedRoster);
+    syncToRemoteAsAdmin(demo.config, normalizedSlots, synchronizedRoster);
 
     set({
       currentEvent: demo.config,

@@ -14,9 +14,26 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable, type Functions } from 'firebase/functions';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  type Auth,
+} from 'firebase/auth';
 import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember } from '@/types';
 
 const COLLECTION = 'boothEvents';
+
+/**
+ * Only these two accounts are permitted admin access. Firebase Auth would
+ * happily authenticate anyone who has a valid account, so this allowlist
+ * is what actually restricts who "the admin" can be — enforced here on
+ * sign-in, and again server-side in every Cloud Function that performs a
+ * sensitive action, since a client-side check alone can be bypassed.
+ */
+export const ALLOWED_ADMIN_EMAILS = ['craig_trickett@trimble.com', 'craigtrickett@gmail.com'];
 
 // Read optional Firebase environment credentials
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
@@ -36,9 +53,35 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.projectId.trim().length > 0
 );
 
+/**
+ * Tracks whether the database is *actually reachable right now*, based on
+ * the real outcome of the most recent operation — not just whether
+ * Firebase is configured. A misconfigured-but-present config, an
+ * expired/invalid API key, or a genuine outage would all leave
+ * isFirebaseConfigured true while every real call fails; UI that shows a
+ * "connected" status should reflect this, not just the config check.
+ */
+export type ConnectivityStatus = 'unknown' | 'connected' | 'error';
+let connectivityStatus: ConnectivityStatus = 'unknown';
+const connectivityListeners = new Set<(status: ConnectivityStatus) => void>();
+
+function reportConnectivity(ok: boolean): void {
+  const next: ConnectivityStatus = ok ? 'connected' : 'error';
+  if (next === connectivityStatus) return;
+  connectivityStatus = next;
+  connectivityListeners.forEach((cb) => cb(connectivityStatus));
+}
+
+export function subscribeToConnectivity(callback: (status: ConnectivityStatus) => void): () => void {
+  callback(connectivityStatus);
+  connectivityListeners.add(callback);
+  return () => connectivityListeners.delete(callback);
+}
+
 let firebaseApp: FirebaseApp | null = null;
 let firestoreDb: Firestore | null = null;
 let functionsClient: Functions | null = null;
+let authClient: Auth | null = null;
 
 function getDb(): Firestore | null {
   if (!isFirebaseConfigured) return null;
@@ -72,6 +115,102 @@ function getFunctionsClient(): Functions | null {
   return functionsClient;
 }
 
+function getAuthClient(): Auth | null {
+  if (!isFirebaseConfigured) return null;
+  if (!firebaseApp && !getDb()) return null; // ensures firebaseApp is initialized
+
+  if (!authClient && firebaseApp) {
+    try {
+      authClient = getAuth(firebaseApp);
+    } catch (err) {
+      console.warn('[Firebase] Failed to initialize Auth client:', err);
+      return null;
+    }
+  }
+
+  return authClient;
+}
+
+/**
+ * Signs in with email/password, then enforces the admin allowlist: if the
+ * account authenticates successfully but its email isn't one of the two
+ * allowed addresses, immediately signs back out and reports it as a
+ * failure rather than leaving an unauthorized session active. This is a
+ * UX convenience, not the real security boundary — every sensitive Cloud
+ * Function checks the caller's verified email itself regardless of what
+ * the client believes.
+ */
+export async function signInAdmin(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = getAuthClient();
+  if (!auth) return { ok: false, error: 'Authentication is not available right now.' };
+
+  try {
+    const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const signedInEmail = (credential.user.email || '').toLowerCase();
+    if (!ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(signedInEmail)) {
+      await signOut(auth);
+      return { ok: false, error: 'This account is not authorized for admin access.' };
+    }
+    return { ok: true };
+  } catch (err) {
+    const code = (err as { code?: string }).code || '';
+    if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+      return { ok: false, error: 'Incorrect email or password.' };
+    }
+    if (code.includes('too-many-requests')) {
+      return { ok: false, error: 'Too many attempts. Please wait a moment and try again.' };
+    }
+    console.warn('[Firebase] signInAdmin failed:', err);
+    return { ok: false, error: 'Could not sign in. Please try again.' };
+  }
+}
+
+export async function signOutAdmin(): Promise<void> {
+  const auth = getAuthClient();
+  if (!auth) return;
+  try {
+    await signOut(auth);
+  } catch (err) {
+    console.warn('[Firebase] signOutAdmin failed:', err);
+  }
+}
+
+export async function sendAdminPasswordReset(email: string): Promise<boolean> {
+  const auth = getAuthClient();
+  if (!auth) return false;
+  try {
+    await sendPasswordResetEmail(auth, email.trim());
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] sendAdminPasswordReset failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Subscribes to auth state, but only ever reports a signed-in user whose
+ * email is on the admin allowlist — an authenticated-but-unauthorized
+ * session (which shouldn't normally happen given signInAdmin signs those
+ * back out immediately, but could if a session persisted from before an
+ * allowlist change) is reported as signed out, not as a valid admin.
+ */
+export function subscribeToAdminAuth(callback: (email: string | null) => void): Unsubscribe | null {
+  const auth = getAuthClient();
+  if (!auth) {
+    callback(null);
+    return null;
+  }
+
+  return onAuthStateChanged(auth, (user) => {
+    const email = (user?.email || '').toLowerCase();
+    if (user && ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email)) {
+      callback(user.email);
+    } else {
+      callback(null);
+    }
+  });
+}
+
 /**
  * Completes the "Connect Google Calendar" flow: hands the one-time OAuth
  * authorization code from Google Identity Services to the
@@ -80,17 +219,13 @@ function getFunctionsClient(): Functions | null {
  * not configured, admin key mismatch, etc.) — callers should show a
  * generic "couldn't connect" message rather than the raw error.
  */
-export async function connectGoogleCalendar(
-  eventId: string,
-  adminKey: string,
-  code: string
-): Promise<boolean> {
+export async function connectGoogleCalendar(eventId: string, code: string): Promise<boolean> {
   const functions = getFunctionsClient();
   if (!functions) return false;
 
   try {
     const callable = httpsCallable(functions, 'exchangeGoogleAuthCode');
-    await callable({ eventId, adminKey, code });
+    await callable({ eventId, code });
     return true;
   } catch (err) {
     console.warn('[Firebase] connectGoogleCalendar failed:', err);
@@ -102,13 +237,13 @@ export async function connectGoogleCalendar(
  * Disconnects Google Calendar for an event: deletes the stored refresh
  * token server-side. Does not attempt to cancel already-created events.
  */
-export async function disconnectGoogleCalendar(eventId: string, adminKey: string): Promise<boolean> {
+export async function disconnectGoogleCalendar(eventId: string): Promise<boolean> {
   const functions = getFunctionsClient();
   if (!functions) return false;
 
   try {
     const callable = httpsCallable(functions, 'disconnectGoogleCalendar');
-    await callable({ eventId, adminKey });
+    await callable({ eventId });
     return true;
   } catch (err) {
     console.warn('[Firebase] disconnectGoogleCalendar failed:', err);
@@ -121,13 +256,13 @@ export async function disconnectGoogleCalendar(eventId: string, adminKey: string
  * server-side. Does not attempt to cancel any Google Calendar invites
  * already sent for bookings on this event.
  */
-export async function deleteEventRemote(eventId: string, adminKey: string): Promise<boolean> {
+export async function deleteEventRemote(eventId: string): Promise<boolean> {
   const functions = getFunctionsClient();
   if (!functions) return false;
 
   try {
     const callable = httpsCallable(functions, 'deleteEvent');
-    await callable({ eventId, adminKey });
+    await callable({ eventId });
     return true;
   } catch (err) {
     console.warn('[Firebase] deleteEventRemote failed:', err);
@@ -174,6 +309,27 @@ function docToStoredEvent(data: BoothEventDoc): StoredEventData {
 }
 
 /**
+ * Fetches every event stored in the database. Only ever called from
+ * within the (now login-gated) admin dashboard's "My Events" list — not
+ * exposed anywhere reachable before authentication.
+ */
+export async function fetchAllEvents(): Promise<EventConfig[]> {
+  const db = getDb();
+  if (!db) return [];
+
+  try {
+    const snap = await getDocs(collection(db, COLLECTION));
+    reportConnectivity(true);
+    return snap.docs
+      .map((d) => (d.data() as BoothEventDoc).config)
+      .filter((c): c is EventConfig => Boolean(c));
+  } catch (err) {
+    reportConnectivity(false);
+    throw err;
+  }
+}
+
+/**
  * Fetches a single event by its admin key or public key directly from
  * Firestore. Returns null only for a genuine "not found" (the query
  * succeeded, no matching document exists). Throws on any network/backend
@@ -188,19 +344,26 @@ export async function fetchEventByKey(
     throw new Error('Firebase is not configured.');
   }
 
-  const eventsRef = collection(db, COLLECTION);
+  try {
+    const eventsRef = collection(db, COLLECTION);
 
-  const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
-  if (!byAdmin.empty) {
-    return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
+    const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
+    if (!byAdmin.empty) {
+      reportConnectivity(true);
+      return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
+    }
+
+    const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
+    reportConnectivity(true);
+    if (!byPublic.empty) {
+      return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
+    }
+
+    return null;
+  } catch (err) {
+    reportConnectivity(false);
+    throw err;
   }
-
-  const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
-  if (!byPublic.empty) {
-    return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
-  }
-
-  return null;
 }
 
 /**
@@ -222,9 +385,39 @@ export async function pushEventToFirebase(eventData: StoredEventData): Promise<b
       roster: eventData.roster,
       updatedAt: new Date().toISOString(),
     });
+    reportConnectivity(true);
     return true;
   } catch (err) {
     console.warn('[Firebase] Event push failed:', err);
+    reportConnectivity(false);
+    return false;
+  }
+}
+
+/**
+ * Same purpose as pushEventToFirebase, but for admin-only changes
+ * (capacity, roster, slot assignment): routed through the
+ * adminUpdateEvent Cloud Function so the write is verified against the
+ * caller's real signed-in identity, rather than written directly from
+ * the client the way staff's claim/release actions are.
+ */
+export async function pushEventToFirebaseAsAdmin(eventData: StoredEventData): Promise<boolean> {
+  const functions = getFunctionsClient();
+  if (!functions) return false;
+
+  try {
+    const callable = httpsCallable(functions, 'adminUpdateEvent');
+    await callable({
+      eventId: eventData.config.id,
+      config: eventData.config,
+      slots: eventData.slots,
+      roster: eventData.roster,
+    });
+    reportConnectivity(true);
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] pushEventToFirebaseAsAdmin failed:', err);
+    reportConnectivity(false);
     return false;
   }
 }

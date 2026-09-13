@@ -181,42 +181,6 @@ export const storage = {
     return all[eventId] || null;
   },
 
-  /**
-   * Lists every event this browser has created or loaded, most recently
-   * updated first. This is the basis of the "My Events" recovery panel —
-   * it only ever sees events this specific browser has touched, since
-   * there is no account system to recover across devices.
-   */
-  listLocalEvents(): EventConfig[] {
-    const all: Record<string, StoredEventData> = this.getAll();
-    return Object.values(all)
-      .map((evt) => evt.config)
-      .filter((config): config is EventConfig => Boolean(config))
-      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-  },
-
-  getByAdminKey(adminKey: string): StoredEventData | null {
-    const all: Record<string, StoredEventData> = this.getAll();
-    const list: StoredEventData[] = Object.values(all);
-    for (const evt of list) {
-      if (evt?.config?.adminKey === adminKey) {
-        return evt;
-      }
-    }
-    return null;
-  },
-
-  getByPublicKey(publicKey: string): StoredEventData | null {
-    const all: Record<string, StoredEventData> = this.getAll();
-    const list: StoredEventData[] = Object.values(all);
-    for (const evt of list) {
-      if (evt?.config?.publicKey === publicKey) {
-        return evt;
-      }
-    }
-    return null;
-  },
-
   deleteEvent(eventId: string): void {
     if (!isBrowser()) return;
     try {

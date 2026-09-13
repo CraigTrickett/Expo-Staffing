@@ -1,63 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Clock, ExternalLink, History, Loader2, Shield, Trash2, Users, X } from 'lucide-react';
+import { Clock, ExternalLink, History, Loader2, Shield, Trash2, Users, X } from 'lucide-react';
 import { storage } from '@/lib/storage';
-import { fetchEventByKey, deleteEventRemote } from '@/lib/firebase';
+import { fetchAllEvents, deleteEventRemote } from '@/lib/firebase';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
+import { useModalA11y } from '@/lib/hooks';
 import type { EventConfig } from '@/types';
 
 interface MyEventsPanelProps {
   onClose: () => void;
 }
 
-interface VerifiedEntry {
-  config: EventConfig;
-  // false when the database couldn't be reached to confirm this entry —
-  // it's shown from local cache only, and might be stale or already gone.
-  confirmed: boolean;
-}
-
 export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
-  const [entries, setEntries] = useState<VerifiedEntry[]>([]);
-  const [isVerifying, setIsVerifying] = useState(true);
+  const [events, setEvents] = useState<EventConfig[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const modalRef = useModalA11y(true, onClose);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function verify() {
-      const candidates = storage.listLocalEvents();
-      const results = await Promise.all(
-        candidates.map(async (evt): Promise<VerifiedEntry | null> => {
-          try {
-            const result = await fetchEventByKey(evt.adminKey);
-            if (!result) {
-              // Confirmed gone from the database — stop showing it, and
-              // stop caching it locally too.
-              storage.deleteEvent(evt.id);
-              return null;
-            }
-            return { config: result.data.config, confirmed: true };
-          } catch {
-            // Couldn't reach the database to confirm this one right now —
-            // show it from local cache, but flagged as unverified rather
-            // than presented as current, confirmed data.
-            return { config: evt, confirmed: false };
-          }
-        })
-      );
+    fetchAllEvents()
+      .then((all) => {
+        if (cancelled) return;
+        setEvents(all.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')));
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.warn('[MyEventsPanel] Failed to load events:', err);
+        if (cancelled) return;
+        setLoadError(true);
+        setIsLoading(false);
+      });
 
-      if (!cancelled) {
-        setEntries(
-          results
-            .filter((r): r is VerifiedEntry => r !== null)
-            .sort((a, b) => (b.config.updatedAt || '').localeCompare(a.config.updatedAt || ''))
-        );
-        setIsVerifying(false);
-      }
-    }
-
-    verify();
     return () => {
       cancelled = true;
     };
@@ -69,12 +45,12 @@ export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
     }
 
     setDeletingId(evt.id);
-    const ok = await deleteEventRemote(evt.id, evt.adminKey);
+    const ok = await deleteEventRemote(evt.id);
     setDeletingId(null);
 
     if (ok) {
       storage.deleteEvent(evt.id);
-      setEntries((prev) => prev.filter((e) => e.config.id !== evt.id));
+      setEvents((prev) => prev.filter((e) => e.id !== evt.id));
       toast.success(`"${evt.title}" was deleted.`, 'Event Deleted');
     } else {
       toast.error('Could not delete this event. Check your connection and try again.', 'Delete Failed');
@@ -83,18 +59,22 @@ export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white border border-[#d8dce0] rounded max-w-lg w-full max-h-[80vh] flex flex-col shadow-modus-3">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        className="bg-white border border-[#d8dce0] rounded max-w-lg w-full max-h-[80vh] flex flex-col shadow-modus-3 focus:outline-hidden"
+      >
         <div className="flex items-start justify-between p-5 border-b border-[#d8dce0]">
           <div className="flex items-start space-x-3">
             <div className="p-2 rounded bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0]">
               <History className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#252a2e]">Events on This Device</h3>
+              <h3 className="text-base font-bold text-[#252a2e]">All Events</h3>
               <p className="text-xs text-[#46535e] mt-0.5 max-w-sm">
-                Events you've created or opened in this browser, confirmed live against the database
-                just now — not a cached list. This does not include events from other devices or
-                browsers you haven't used.
+                Every event currently stored in the database.
               </p>
             </div>
           </div>
@@ -109,34 +89,27 @@ export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {isVerifying ? (
+          {isLoading ? (
             <div className="py-10 flex flex-col items-center justify-center text-xs text-[#7c878e] space-y-2">
               <Loader2 className="w-5 h-5 animate-spin text-[#0063a3]" />
-              <span>Confirming against the database...</span>
+              <span>Loading events...</span>
             </div>
-          ) : entries.length === 0 ? (
+          ) : loadError ? (
+            <div className="py-10 text-center text-xs text-[#da3832]">
+              Could not reach the database. Check your connection and try again.
+            </div>
+          ) : events.length === 0 ? (
             <div className="py-10 text-center text-xs text-[#7c878e]">
-              No events found in this browser yet.
+              No events found.
             </div>
           ) : (
-            entries.map(({ config: evt, confirmed }) => (
+            events.map((evt) => (
               <div
                 key={evt.id}
                 className="p-3 bg-[#f8f9fa] border border-[#d8dce0] rounded flex items-center justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-[#252a2e] truncate flex items-center gap-1.5">
-                    <span className="truncate">{evt.title}</span>
-                    {!confirmed && (
-                      <span
-                        className="inline-flex items-center gap-1 shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#fef8e8] text-[#8a5800] border border-[#f7c970]"
-                        title="Couldn't reach the database to confirm this is still current"
-                      >
-                        <AlertTriangle className="w-2.5 h-2.5" />
-                        <span>Unverified</span>
-                      </span>
-                    )}
-                  </div>
+                  <div className="text-xs font-bold text-[#252a2e] truncate">{evt.title}</div>
                   <div className="text-[11px] text-[#7c878e] flex items-center gap-1.5 mt-0.5">
                     <Clock className="w-3 h-3" />
                     <span>
@@ -184,7 +157,7 @@ export const MyEventsPanel: React.FC<MyEventsPanelProps> = ({ onClose }) => {
 
         <div className="p-4 border-t border-[#d8dce0] bg-[#f8f9fa] text-[11px] text-[#7c878e] flex items-center gap-1.5">
           <ExternalLink className="w-3 h-3 shrink-0" />
-          <span>For access from a different device, ask whoever shared the link with you to resend it.</span>
+          <span>Staff access this event via the individual link you share with them — they don't see this list.</span>
         </div>
       </div>
     </div>

@@ -102,7 +102,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
               type="button"
               onClick={onOpenShareModal}
               className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-              title="Open full capability share modal with QR code and secret admin link"
+              title="Open the share modal with QR code and admin link"
             >
               <Share2 className="w-3.5 h-3.5 text-[#0063a3]" />
               <span>Share &amp; QR</span>

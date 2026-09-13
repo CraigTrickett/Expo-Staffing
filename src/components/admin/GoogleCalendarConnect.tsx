@@ -67,7 +67,7 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
           }
           return;
         }
-        const ok = await connectGoogleCalendar(config.id, config.adminKey, response.code);
+        const ok = await connectGoogleCalendar(config.id, response.code);
         setIsConnecting(false);
         if (ok) {
           toast.success(
@@ -84,7 +84,7 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
 
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
-    const ok = await disconnectGoogleCalendar(config.id, config.adminKey);
+    const ok = await disconnectGoogleCalendar(config.id);
     setIsDisconnecting(false);
     if (ok) {
       toast.info('Google Calendar disconnected. New claims will no longer send invites.');
