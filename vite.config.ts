@@ -27,6 +27,13 @@ try {
     if (!process.env.VITE_FIREBASE_APP_ID && firebaseAppletConfig.appId) {
       process.env.VITE_FIREBASE_APP_ID = firebaseAppletConfig.appId;
     }
+    // firestoreDatabaseId matters: AI Studio provisions Firestore under a
+    // named database (not the SDK's "(default)" one), so without passing
+    // this through, every Firestore call fails with "Database '(default)'
+    // not found" even though the project and credentials are all correct.
+    if (!process.env.VITE_FIREBASE_DATABASE_ID && firebaseAppletConfig.firestoreDatabaseId) {
+      process.env.VITE_FIREBASE_DATABASE_ID = firebaseAppletConfig.firestoreDatabaseId;
+    }
   }
 } catch {
   // Ignore errors reading fallback config

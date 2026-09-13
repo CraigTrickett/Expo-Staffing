@@ -45,6 +45,12 @@ const firebaseConfig = {
   messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: env.VITE_FIREBASE_APP_ID,
 };
+// Optional: only needed when Firestore was provisioned under a named
+// database rather than the SDK's implicit "(default)" one — which is
+// exactly how AI Studio's own setup provisions it. Omitting this when
+// it's needed produces a real but easy-to-miss error: "Database
+// '(default)' not found", even though every other credential is correct.
+const firestoreDatabaseId = env.VITE_FIREBASE_DATABASE_ID;
 
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
@@ -89,7 +95,9 @@ function getDb(): Firestore | null {
   if (!firestoreDb) {
     try {
       firebaseApp = initializeApp(firebaseConfig);
-      firestoreDb = getFirestore(firebaseApp);
+      firestoreDb = firestoreDatabaseId
+        ? getFirestore(firebaseApp, firestoreDatabaseId)
+        : getFirestore(firebaseApp);
     } catch (err) {
       console.warn('[Firebase] Failed to initialize, falling back to local mode:', err);
       return null;

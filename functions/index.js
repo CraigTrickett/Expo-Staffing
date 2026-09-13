@@ -5,7 +5,13 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 initializeApp();
-const db = getFirestore();
+// Optional: only needed when Firestore was provisioned under a named
+// database rather than the implicit "(default)" one — which is exactly
+// how this project's Firestore was set up. Must match
+// VITE_FIREBASE_DATABASE_ID on the client side. See
+// functions/.env.example.
+const FIRESTORE_DATABASE_ID = process.env.FIRESTORE_DATABASE_ID;
+const db = FIRESTORE_DATABASE_ID ? getFirestore(FIRESTORE_DATABASE_ID) : getFirestore();
 
 const GOOGLE_CLIENT_ID = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
 const GOOGLE_CLIENT_SECRET = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
@@ -237,6 +243,7 @@ function diffBookings(beforeSlots, afterSlots) {
 exports.onEventWrite = onDocumentWritten(
   {
     document: `${EVENTS_COLLECTION}/{eventId}`,
+    database: FIRESTORE_DATABASE_ID || undefined,
     secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET],
   },
   async (event) => {

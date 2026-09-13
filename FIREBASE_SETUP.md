@@ -15,6 +15,19 @@ see `GOOGLE_CALENDAR_SETUP.md`).
 
 Firestore Database → Create database → start in production mode.
 
+**Important**: if you're prompted for a Database ID and anything other
+than accepting the literal default is offered (this happens automatically
+if Google AI Studio provisions the project for you — it creates a named
+database, not the default one), you must also set
+`VITE_FIREBASE_DATABASE_ID` (frontend) and `FIRESTORE_DATABASE_ID`
+(`functions/.env`) to that exact ID. Skipping this produces a real but
+easy-to-miss error in the browser console — `Database '(default)' not
+found` — even though every other credential is correct, and the app will
+hang on "Loading..." indefinitely rather than showing a clear error,
+since Firestore's own retry behavior doesn't fail fast. Check your
+project's Firestore Database page in the console for the exact ID if
+you're not sure which situation you're in.
+
 ## 3. Deploy the security rules
 
 Deploy `firestore.rules` exactly as committed in this repo — don't write
