@@ -156,35 +156,32 @@ function docToStoredEvent(data: BoothEventDoc): StoredEventData {
 
 /**
  * Fetches a single event by its admin key or public key directly from
- * Firestore. Returns null on a genuine "not found" as well as on any
- * network/config failure — callers should fall back to local storage
- * in either case, since this is the single source of truth only when
- * reachable.
+ * Firestore. Returns null only for a genuine "not found" (the query
+ * succeeded, no matching document exists). Throws on any network/backend
+ * failure — callers must handle that distinctly rather than treating a
+ * connection problem the same as "this event doesn't exist."
  */
 export async function fetchEventByKey(
   key: string
 ): Promise<{ data: StoredEventData; role: 'admin' | 'staff' } | null> {
   const db = getDb();
-  if (!db) return null;
-
-  try {
-    const eventsRef = collection(db, COLLECTION);
-
-    const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
-    if (!byAdmin.empty) {
-      return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
-    }
-
-    const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
-    if (!byPublic.empty) {
-      return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
-    }
-
-    return null;
-  } catch (err) {
-    console.warn('[Firebase] fetchEventByKey exception, falling back to local:', err);
-    return null;
+  if (!db) {
+    throw new Error('Firebase is not configured.');
   }
+
+  const eventsRef = collection(db, COLLECTION);
+
+  const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
+  if (!byAdmin.empty) {
+    return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
+  }
+
+  const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
+  if (!byPublic.empty) {
+    return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
+  }
+
+  return null;
 }
 
 /**

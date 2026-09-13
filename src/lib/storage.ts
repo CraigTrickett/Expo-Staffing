@@ -217,21 +217,6 @@ export const storage = {
     return null;
   },
 
-  getByKey(key: string): { data: StoredEventData; role: 'admin' | 'staff' } | null {
-    const trimmed = key.trim();
-    const all: Record<string, StoredEventData> = this.getAll();
-    const list: StoredEventData[] = Object.values(all);
-    for (const evt of list) {
-      if (evt?.config?.adminKey === trimmed) {
-        return { data: evt, role: 'admin' };
-      }
-      if (evt?.config?.publicKey === trimmed) {
-        return { data: evt, role: 'staff' };
-      }
-    }
-    return null;
-  },
-
   deleteEvent(eventId: string): void {
     if (!isBrowser()) return;
     try {
@@ -241,24 +226,6 @@ export const storage = {
     } catch (err) {
       console.error('[storage] Failed to delete event:', err);
     }
-  },
-
-  initOrSeed(): StoredEventData {
-    if (!isBrowser()) {
-      return createDemoEvent();
-    }
-
-    const all: Record<string, StoredEventData> = this.getAll();
-    const list: StoredEventData[] = Object.values(all);
-    if (list.length === 0) {
-      const demo = createDemoEvent();
-      this.saveEvent(demo);
-      return demo;
-    }
-
-    // Return the first stored event or demo
-    const firstEvent = list[0];
-    return firstEvent || createDemoEvent();
   },
 
   resetToDemo(): StoredEventData {

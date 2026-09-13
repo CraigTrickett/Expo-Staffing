@@ -21,8 +21,9 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute }) => {
-  const { currentEvent: config, slots, resetToDemo } = useEventStore();
+  const { currentEvent: config, slots, resetToDemo, isRemoteConfigured } = useEventStore();
   const [showMyEvents, setShowMyEvents] = useState(false);
+  const remoteConnected = isRemoteConfigured();
 
   const handleGlobalExport = () => {
     if (!config) return;
@@ -61,6 +62,26 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
                 </div>
               </div>
             </a>
+
+            <span
+              className={`hidden sm:inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                remoteConnected
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-[#fbad26]/15 border-[#fbad26]/40 text-[#fef8e8]'
+              }`}
+              title={
+                remoteConnected
+                  ? 'Data syncs to a shared database — the same event is reachable from any device.'
+                  : 'No database connected — data is only saved in this browser and will not be visible from other devices.'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  remoteConnected ? 'bg-[#4ade80]' : 'bg-[#fbad26]'
+                }`}
+              />
+              <span>{remoteConnected ? 'Synced' : 'Local only'}</span>
+            </span>
           </div>
 
           {/* Quick Context Navigation */}

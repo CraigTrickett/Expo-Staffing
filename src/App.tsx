@@ -3,7 +3,9 @@ import { Layout } from '@/components/layout/Layout';
 import { CreateEventWizard } from '@/components/wizard/CreateEventWizard';
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { StaffShiftPicker } from '@/components/staff/StaffShiftPicker';
+import { DatabaseRequiredScreen } from '@/components/common/DatabaseRequiredScreen';
 import { useEventStore } from '@/store/useEventStore';
+import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY } from '@/lib/storage';
 import { ArrowRight, Calendar, Shield, Sparkles, Users } from 'lucide-react';
 
@@ -40,6 +42,10 @@ export default function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  if (!isFirebaseConfigured) {
+    return <DatabaseRequiredScreen />;
+  }
 
   return (
     <Layout currentRoute={route.name}>

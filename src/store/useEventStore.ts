@@ -4,6 +4,7 @@ import type {
   EventMetrics,
   ShiftBooking,
   StaffMember,
+  StoredEventData,
   TimeSlot,
   WizardPayload,
 } from '@/types';
@@ -14,7 +15,7 @@ import {
   updateSlotDerivedState,
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
-import { storage } from '@/lib/storage';
+import { storage, DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY, createDemoEvent } from '@/lib/storage';
 import { remoteClaimShiftGuard, fetchEventByKey, pushEventToFirebase, isFirebaseConfigured, subscribeToEvent } from '@/lib/firebase';
 import { toast } from '@/components/common/Toast';
 
@@ -83,9 +84,22 @@ function recalculateStaffHours(slots: TimeSlot[], roster: StaffMember[]): StaffM
  * the source of truth for the current tab; this just keeps other
  * devices in sync. Failures are logged inside pushEventToFirebase itself.
  */
+/**
+ * Pushes a change to the database. Now that Firebase is a hard
+ * requirement (the app won't even render without it — see App.tsx), a
+ * failure here means the change genuinely was not saved anywhere shared,
+ * which the user needs to know rather than have it silently vanish into
+ * a local-only copy.
+ */
 function syncToRemote(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
-  if (!isFirebaseConfigured) return;
-  void pushEventToFirebase({ config, slots, roster });
+  pushEventToFirebase({ config, slots, roster }).then((ok) => {
+    if (!ok) {
+      toast.error(
+        'Your last change could not be saved to the database. Check your connection and try again.',
+        'Not Saved'
+      );
+    }
+  });
 }
 
 /**
@@ -222,14 +236,35 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       return 'not_found';
     }
 
-    // Ensure demo event exists if local storage is completely empty
-    storage.initOrSeed();
+    let result: { data: StoredEventData; role: 'admin' | 'staff' } | null;
+    try {
+      result = await fetchEventByKey(trimmed);
+    } catch (err) {
+      console.warn('[loadEventByKey] Could not reach the database:', err);
+      set({
+        currentEvent: null,
+        slots: [],
+        roster: [],
+        currentStaff: null,
+        metrics: emptyMetrics,
+        isLoading: false,
+        error: 'Could not reach the database. Check your connection and try again.',
+        role: null,
+      });
+      return 'not_found';
+    }
 
-    // Prefer the remote copy when a backend is configured, since it's
-    // the shared source of truth across devices. Fall back to whatever
-    // this browser already has locally (offline, or no backend set up).
-    const remoteResult = await fetchEventByKey(trimmed);
-    const result = remoteResult || storage.getByKey(trimmed);
+    // The demo event lives at a fixed, well-known key pair reached from
+    // the landing page banner. If nobody has ever created it in the
+    // database yet (a brand-new deployment's very first "Explore Demo"
+    // click), seed it now rather than reporting "not found."
+    if (!result && (trimmed === DEMO_ADMIN_KEY || trimmed === DEMO_PUBLIC_KEY)) {
+      const demo = createDemoEvent();
+      const pushed = await pushEventToFirebase(demo);
+      if (pushed) {
+        result = { data: demo, role: trimmed === DEMO_ADMIN_KEY ? 'admin' : 'staff' };
+      }
+    }
 
     if (!result) {
       set({
@@ -762,6 +797,11 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     const synchronizedRoster = recalculateStaffHours(demo.slots, demo.roster);
     const normalizedSlots = demo.slots.map(updateSlotDerivedState);
     const metrics = calculateCoverage(normalizedSlots, synchronizedRoster);
+
+    // The demo event is reached via a fixed, well-known key pair from the
+    // landing page banner — it must exist in the database like any other
+    // event, not just this browser's local cache.
+    syncToRemote(demo.config, normalizedSlots, synchronizedRoster);
 
     set({
       currentEvent: demo.config,
