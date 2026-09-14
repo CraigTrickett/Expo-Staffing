@@ -68,7 +68,8 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
       return;
     }
     const subject = `Expo Staffing Reminder: ${config.title}`;
-    const body = `Hi everyone,\n\nWe are organizing the staff schedule for ${config.title} at ${config.location}.\n\nEach team member is asked to commit to ${targetHours} hours on the expo floor.\n\nPlease claim your open shifts using this self-service link:\n${publicUrl}\n\nThank you!`;
+    const locationClause = config.location ? ` at ${config.location}` : '';
+    const body = `Hi everyone,\n\nWe are organizing the staff schedule for ${config.title}${locationClause}.\n\nEach team member is asked to commit to ${targetHours} hours on the expo floor.\n\nPlease claim your open shifts using this self-service link:\n${publicUrl}\n\nThank you!`;
     window.location.href = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 

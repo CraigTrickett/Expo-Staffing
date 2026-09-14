@@ -28,7 +28,7 @@ import { ShiftMatrix } from '../grid/ShiftMatrix';
 import { MyEventsPanel } from '../common/MyEventsPanel';
 import { signOutAdmin } from '@/lib/firebase';
 import { useModalA11y } from '@/lib/hooks';
-import { cn, formatTime12h } from '@/lib/utils';
+import { cn, formatTime12h, roundTargetHoursForDisplay } from '@/lib/utils';
 import type { StaffMember, TimeSlot } from '@/types';
 
 interface AdminDashboardProps {
@@ -174,6 +174,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
       {/* Header Stats Panel */}
       <CoverageStats
         config={currentEvent}
+        slots={slots}
         metrics={metrics}
         roster={roster}
         zeroHoursCount={zeroHoursMembers.length}
@@ -405,7 +406,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
                             {member.name}
                           </div>
                           <div className="text-[10px] text-[#7c878e]">
-                            {member.totalBookedHours}h booked / {metrics.dynamicTargetHours}h target
+                            {member.totalBookedHours}h booked / ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)}h target
                           </div>
                         </div>
                         <span className="text-[11px] font-semibold text-[#0063a3] group-hover:translate-x-0.5 transition-transform flex items-center">

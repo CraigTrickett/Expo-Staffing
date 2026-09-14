@@ -145,7 +145,6 @@ export interface TimezoneOption {
   value: string;
   label: string;
 }
-
 /**
  * Every IANA timezone the current runtime supports, each labeled with its
  * current UTC offset (e.g. "America/Los_Angeles (GMT-7)") so picking the
@@ -177,4 +176,21 @@ export function getTimezoneOptions(): TimezoneOption[] {
       };
     })
     .sort((a, b) => a.value.localeCompare(b.value));
+}
+
+/**
+ * A precise per-rep target (e.g. 3.4 hours) isn't something anyone can
+ * actually book — shifts only come in whole units. Rounds UP so the
+ * number shown is always an achievable, slightly-generous target rather
+ * than one that rounds down and could leave the event understaffed if
+ * everyone hits exactly their displayed number.
+ *
+ * Display-only: anywhere the app checks whether someone has *met* their
+ * target should keep comparing against the precise, unrounded value —
+ * rounding up the comparison threshold itself would make "met" harder
+ * to reach than the math actually requires.
+ */
+export function roundTargetHoursForDisplay(hours: number): number {
+  if (!Number.isFinite(hours) || hours <= 0) return 0;
+  return Math.ceil(hours);
 }

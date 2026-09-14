@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import type { StaffMember } from '@/types';
 import { useModalA11y } from '@/lib/hooks';
-import { cn } from '@/lib/utils';
+import { cn, roundTargetHoursForDisplay } from '@/lib/utils';
 
 interface IdentityBarProps {
   roster: StaffMember[];
@@ -128,7 +128,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                             <div className="text-[10px] text-[#7c878e] font-mono truncate">{member.email}</div>
                           </div>
                           <span className="text-[11px] font-mono text-[#46535e] shrink-0">
-                            {member.totalBookedHours}h / {targetHours}h
+                            {member.totalBookedHours}h / ~{roundTargetHoursForDisplay(targetHours)}h
                           </span>
                         </button>
                       ))}
@@ -187,7 +187,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                         {currentStaff.totalBookedHours}
                       </strong>{' '}
                       of{' '}
-                      <strong className="text-[#252a2e] font-mono">{targetHours}</strong> hours booked
+                      <strong className="text-[#252a2e] font-mono">~{roundTargetHoursForDisplay(targetHours)}</strong> hours booked
                     </span>
                     {isTargetMet && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00823b] bg-[#e6f5ec] px-2 py-0.5 rounded border border-[#a3e0be]">

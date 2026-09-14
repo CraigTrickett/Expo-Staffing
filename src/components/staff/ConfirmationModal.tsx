@@ -183,8 +183,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   </div>
                   <div className="text-[11px] text-[#46535e] flex items-center space-x-2">
                     <span className="text-[#0063a3] font-semibold">{formatDate(slot.date)}</span>
-                    <span>&bull;</span>
-                    <span className="truncate max-w-[170px]">{config.location}</span>
+                    {config.location && (
+                      <>
+                        <span>&bull;</span>
+                        <span className="truncate max-w-[170px]">{config.location}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -83,6 +83,16 @@ release, **P2** = worth fixing, not blocking.
 | CAL-04 | Special characters in event title/location survive export | Use a title/location containing a comma, semicolon, or backslash, export ICS | File opens without corruption in a real calendar app; text displays with the original punctuation | P1 |
 | CAL-05 | Copy Shift Summary | Use "Copy Shift Summary", paste into a text field | Plaintext summary is accurate and complete for all of that person's shifts | P2 |
 
+## 5a. CSV Export (Admin)
+
+| ID | Test | Steps | Expected Result | Priority |
+|----|------|-------|------------------|----------|
+| CSV-01 | Export includes every slot, not just booked ones | Click "Export CSV" on an event with a mix of open and filled slots, open the file | One row per slot total, including fully open ones marked "Open" | P0 |
+| CSV-02 | Rows are in chronological order | Check row order in the exported file | Sorted by date then start time, regardless of how slots happen to be stored | P1 |
+| CSV-03 | Multiple staff on one slot are listed clearly | Export a slot with 2+ people assigned | Names and emails both appear, semicolon-separated within their own column, not one name per row | P1 |
+| CSV-04 | Special characters in names don't break columns | Export a roster containing a comma or quote in someone's name | Opens correctly in a real spreadsheet app (Excel/Sheets) with columns intact, not shifted | P1 |
+| CSV-05 | File opens correctly in Excel, not just a text editor | Open the exported file in Excel or Google Sheets | Columns align correctly; non-ASCII characters (if any) display correctly, not as garbled text | P1 |
+
 ## 6. Google Calendar Auto-Invite (opt-in feature)
 
 | ID | Test | Steps | Expected Result | Priority |
@@ -121,7 +131,7 @@ release, **P2** = worth fixing, not blocking.
 | MSG-01 | Connectivity badge reflects reality | Watch the header badge through a normal session, then simulate an offline write | Says "Synced" only after a real successful operation; reflects failure after one fails, not just missing config | P0 |
 | MSG-02 | Wizard page has no demo-promotion banner | Load the landing page while signed out and signed in | No "Explore Demo" section appears anywhere; the demo event still exists and is reachable only via All Events or a direct link, not specially promoted | P2 |
 | MSG-03 | No stale wording about login requirements | Read all copy referencing "no login," "no password," "zero signups" | Every such claim is scoped correctly to *staff* — none imply the admin/creation flow also needs no login | P0 |
-| MSG-04 | Target hours copy matches its own computation | Compare the "Target: Xh per rep" text against total required hours ÷ roster size, computed independently | Matches | P1 |
+| MSG-04 | Displayed target is rounded up, but fairness logic uses the precise value | Compare the displayed "~Xh" target against total required hours ÷ roster size computed independently (e.g. 3.4 should display as ~4) | Displayed number is always rounded up, never down; someone who has booked exactly the precise (unrounded) target — even if below the displayed rounded number — is still correctly marked "Target Met" | P1 |
 | MSG-05 | Error messages are specific enough to act on | Trigger each distinct error state (event not found, database unreachable, wrong password, etc.) | Each produces a message that correctly identifies which of these happened — no generic catch-all that could mislead about the actual cause | P1 |
 
 ## 10. Edge Cases & Input Validation

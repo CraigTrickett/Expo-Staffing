@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Download,
   ExternalLink,
   Globe,
   Minus,
@@ -13,13 +14,14 @@ import {
   Share2,
   Users,
 } from 'lucide-react';
-import type { EventConfig, EventMetrics, StaffMember } from '@/types';
-import { cn, getTimezoneOptions } from '@/lib/utils';
-import { downloadEventIcs } from '@/lib/calendar';
+import type { EventConfig, EventMetrics, StaffMember, TimeSlot } from '@/types';
+import { cn, getTimezoneOptions, roundTargetHoursForDisplay } from '@/lib/utils';
+import { downloadScheduleCsv } from '@/lib/csv';
 import { toast } from '@/components/common/Toast';
 
 interface CoverageStatsProps {
   config: EventConfig;
+  slots: TimeSlot[];
   metrics: EventMetrics;
   roster: StaffMember[];
   onOpenZeroHoursDrawer: () => void;
@@ -32,6 +34,7 @@ interface CoverageStatsProps {
 
 export const CoverageStats: React.FC<CoverageStatsProps> = ({
   config,
+  slots,
   metrics,
   roster,
   onOpenZeroHoursDrawer,
@@ -63,9 +66,8 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExportIcs = () => {
-    // Generate .ics calendar for all scheduled shifts
-    downloadEventIcs(config, []);
+  const handleExportCsv = () => {
+    downloadScheduleCsv(config, slots);
   };
 
   return (
@@ -143,8 +145,12 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             </div>
           ) : (
             <p className="text-xs text-[#46535e] mt-0.5 flex items-center gap-1.5 flex-wrap">
-              <span>{config.location}</span>
-              <span>&bull;</span>
+              {config.location && (
+                <>
+                  <span>{config.location}</span>
+                  <span>&bull;</span>
+                </>
+              )}
               <span>{config.startDate} to {config.endDate}</span>
               <span>&bull;</span>
               <span>{config.dailyStartTime} - {config.dailyEndTime} ({config.slotDurationMinutes}m shifts)</span>
@@ -178,6 +184,15 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
               <span>Share &amp; QR</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            title="Export the full shift schedule, including open slots, as a CSV file"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
           <a
             href={`#/event/${config.publicKey}`}
             target="_blank"
@@ -389,7 +404,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             </div>
           </div>
           <div className="text-[11px] text-[#7c878e]">
-            Target: {metrics.dynamicTargetHours}h per rep &bull; calculated from roster &amp; slots
+            Target: ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)}h per rep &bull; calculated from roster &amp; slots
           </div>
         </div>
       </div>

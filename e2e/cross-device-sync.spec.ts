@@ -85,4 +85,72 @@ test.describe('Cross-device sync', () => {
       timeout: 10_000,
     });
   });
+
+  test('SYNC-03: two truly simultaneous claims on the last open spot — exactly one succeeds, never both', async ({
+    page,
+    context,
+  }) => {
+    // Deliberately fires both claims via Promise.all rather than one
+    // after the other — a sequential test would never actually exercise
+    // the race window this is checking for. This directly targets the
+    // fix in claimShiftAtomic: a plain read-then-write had a real gap
+    // where both claims could pass their capacity check before either
+    // write landed, either over-booking the slot or silently erasing one
+    // claim entirely (see the comment on claimShiftAtomic for the full
+    // reasoning).
+    await page.goto('/#/');
+    await loginAsAdmin(page);
+    await createEventThroughWizard(page, { title: `Race Condition Test ${Date.now()}` });
+
+    // Force capacity to exactly 1 so the race is deterministic to detect.
+    for (let i = 0; i < 10; i++) {
+      const stepper = page.getByTitle('Decrease default slot capacity');
+      if (await stepper.isDisabled()) break;
+      await stepper.click();
+    }
+    const staffPath = await getStaffLinkPath(page);
+
+    const deviceA = await context.newPage();
+    const deviceB = await context.newPage();
+    await deviceA.goto(staffPath);
+    await deviceB.goto(staffPath);
+
+    for (const device of [deviceA, deviceB]) {
+      await device.getByText(/Add My Name/i).first().click();
+    }
+    await deviceA.getByPlaceholder(/Jordan Miller/i).fill(`Racer A ${Date.now()}`);
+    await deviceA.getByRole('button', { name: 'Save & Start Scheduling' }).click();
+    await deviceB.getByPlaceholder(/Jordan Miller/i).fill(`Racer B ${Date.now()}`);
+    await deviceB.getByRole('button', { name: 'Save & Start Scheduling' }).click();
+
+    // Fired together, not sequentially.
+    await Promise.all([
+      deviceA.getByText(/Claim This Shift|Sign Up for Shift/i).first().click(),
+      deviceB.getByText(/Claim This Shift|Sign Up for Shift/i).first().click(),
+    ]);
+
+    // Give both devices' live subscriptions a moment to settle, then
+    // check the final, reconciled state on each.
+    await deviceA.waitForTimeout(3_000);
+    await deviceB.waitForTimeout(1_000);
+
+    const aClaimed = await deviceA.getByText(/Claimed/i).count();
+    const bClaimed = await deviceB.getByText(/Claimed/i).count();
+
+    // Exactly one of the two claimed it — never both (over-booked past
+    // capacity 1) and never neither (a claim silently lost).
+    expect(aClaimed + bClaimed).toBe(1);
+
+    // The loser should see a clear conflict message, not silence.
+    const loserPage = aClaimed === 1 ? deviceB : deviceA;
+    await expect(
+      loserPage.getByText(/already claimed|full|conflict/i).first()
+    ).toBeVisible({ timeout: 5_000 }).catch(() => {
+      // The loser's UI may instead just show the slot as "Full" rather
+      // than a toast if the live subscription already updated it before
+      // their own claim attempt resolved — either is an acceptable
+      // outcome, but "still shows as claimable" is not.
+    });
+    await expect(loserPage.getByText(/Claim This Shift|Sign Up for Shift/i)).not.toBeVisible();
+  });
 });

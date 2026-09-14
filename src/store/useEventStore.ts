@@ -16,7 +16,7 @@ import {
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
 import { storage, DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY, createDemoEvent } from '@/lib/storage';
-import { remoteClaimShiftGuard, fetchEventByKey, pushEventToFirebase, pushEventToFirebaseAsAdmin, subscribeToEvent } from '@/lib/firebase';
+import { claimShiftAtomic, fetchEventByKey, pushEventToFirebase, pushEventToFirebaseAsAdmin, subscribeToEvent } from '@/lib/firebase';
 import { toast } from '@/components/common/Toast';
 
 interface EventStoreState {
@@ -468,13 +468,11 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     });
 
     try {
-      // Hybrid Concurrency Check (Firebase / simulated conflict)
-      const remoteCheck = await remoteClaimShiftGuard(
-        currentEvent.id,
-        slotId,
-        newBooking,
-        targetSlot
-      );
+      // Atomic claim: this check and the actual write happen together as
+      // one Firestore transaction, closing the race window the previous
+      // check-then-separately-write pattern had (see claimShiftAtomic's
+      // own comment for the full reasoning).
+      const remoteCheck = await claimShiftAtomic(currentEvent.id, slotId, newBooking, durationHours);
 
       if (remoteCheck.status === 409 || remoteCheck.conflict) {
         const conflictMsg =
@@ -500,17 +498,36 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
         return false;
       }
 
-      // Persist to storage
+      // Reconcile local state with what the transaction actually
+      // committed (when Firebase is configured) rather than trusting our
+      // own pre-transaction guess — the two could differ under real
+      // concurrent activity. Falls back to the locally-computed values
+      // when running without a configured backend.
+      const finalSlots = remoteCheck.committedSlots || nextSlots;
+      const finalRoster = remoteCheck.committedRoster || nextRoster;
+      const finalMetrics = calculateCoverage(finalSlots, finalRoster);
+      const finalStaff = finalRoster.find((m) => m.id === currentStaff.id) || updatedStaff;
+
+      // Persist to local cache. The remote write already happened inside
+      // claimShiftAtomic's transaction when Firebase is configured — no
+      // separate syncToRemote call here, since that would be a second,
+      // non-atomic overwrite that could undo the safety the transaction
+      // just provided.
       const nextConfig = touchConfig(currentEvent);
       storage.saveEvent({
         config: nextConfig,
-        slots: nextSlots,
-        roster: nextRoster,
+        slots: finalSlots,
+        roster: finalRoster,
       });
-      syncToRemote(nextConfig, nextSlots, nextRoster);
 
-      // Clear optimistic rollback flag on success
-      set({ currentEvent: nextConfig, optimisticRollbackCache: null });
+      set({
+        currentEvent: nextConfig,
+        slots: finalSlots,
+        roster: finalRoster,
+        currentStaff: finalStaff,
+        metrics: finalMetrics,
+        optimisticRollbackCache: null,
+      });
       toast.success(
         `Claimed ${targetSlot.startTime} - ${targetSlot.endTime} shift!`,
         'Shift Confirmed'

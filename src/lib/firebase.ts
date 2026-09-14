@@ -10,6 +10,7 @@ import {
   getDocs,
   onSnapshot,
   limit,
+  runTransaction,
   type Firestore,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -23,6 +24,7 @@ import {
   type Auth,
 } from 'firebase/auth';
 import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember } from '@/types';
+import { parseTimeToMinutes, updateSlotDerivedState } from './matrix';
 
 const COLLECTION = 'boothEvents';
 
@@ -301,6 +303,12 @@ export interface RemoteClaimResult {
   status: 200 | 409 | 500;
   message?: string;
   conflict?: boolean;
+  // Present on a successful claim — the actual slots/roster as committed
+  // by the transaction, which the caller should reconcile its local
+  // state against rather than trusting its own pre-transaction guess,
+  // since concurrent activity could mean the two differ.
+  committedSlots?: TimeSlot[];
+  committedRoster?: StaffMember[];
 }
 
 interface BoothEventDoc {
@@ -456,16 +464,29 @@ export function subscribeToEvent(
 }
 
 /**
- * Re-reads the live event from Firestore immediately before a shift claim
- * commits, to catch a real concurrent claim from another device. Falls
- * back to optimistic local success when Firebase isn't configured or is
- * unreachable, matching the app's offline-first design.
+ * Atomically claims a shift via a real Firestore transaction — this is
+ * the fix for a genuine race condition the previous implementation had:
+ * a plain read-then-separately-write pattern has a real time window
+ * where two near-simultaneous claims on the last open spot could both
+ * pass their capacity check (each reading the state before the other's
+ * write lands), resulting in either an over-capacity slot or, worse,
+ * one claim's full-document overwrite silently erasing the other's
+ * booking entirely. A Firestore transaction closes that window: it
+ * reads the document fresh *inside* the transaction, re-validates
+ * against that fresh read, and Firestore itself detects and retries the
+ * whole transaction if another write lands in between — so the
+ * validation and the write are atomic relative to any concurrent claim,
+ * not just "recently checked."
+ *
+ * Falls back to optimistic local success when Firebase isn't configured
+ * or is unreachable, matching the app's offline-first design — this
+ * mirrors the previous function's fallback behavior exactly.
  */
-export async function remoteClaimShiftGuard(
+export async function claimShiftAtomic(
   eventId: string,
   slotId: string,
   booking: ShiftBooking,
-  currentSlot: TimeSlot
+  durationHours: number
 ): Promise<RemoteClaimResult> {
   if (simulateConflictFlag) {
     simulateConflictFlag = false;
@@ -482,36 +503,77 @@ export async function remoteClaimShiftGuard(
     return { success: true, status: 200 };
   }
 
+  const docRef = doc(db, COLLECTION, eventId);
+
   try {
-    const snap = await getDoc(doc(db, COLLECTION, eventId));
-    if (!snap.exists()) {
-      return { success: true, status: 200 };
-    }
+    const result = await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(docRef);
+      if (!snap.exists()) {
+        return { success: true as const, status: 200 as const };
+      }
 
-    const data = snap.data() as BoothEventDoc;
-    const liveSlot = data.slots?.find((s) => s.id === slotId) || currentSlot;
+      const data = snap.data() as BoothEventDoc;
+      const slotIndex = data.slots.findIndex((s) => s.id === slotId);
+      if (slotIndex === -1) {
+        return { success: true as const, status: 200 as const };
+      }
 
-    if (liveSlot.bookings.length >= liveSlot.capacity) {
+      const liveSlot = data.slots[slotIndex];
+
+      if (liveSlot.bookings.length >= liveSlot.capacity) {
+        return {
+          success: false as const,
+          status: 409 as const,
+          conflict: true,
+          message: 'Slot was just claimed by someone else! Matrix updated.',
+        };
+      }
+
+      if (liveSlot.bookings.some((b) => b.staffId === booking.staffId)) {
+        return {
+          success: false as const,
+          status: 409 as const,
+          conflict: true,
+          message: 'You are already booked for this slot on another device.',
+        };
+      }
+
+      const updatedSlot = updateSlotDerivedState({
+        ...liveSlot,
+        bookings: [...liveSlot.bookings, booking],
+      });
+      const nextSlots = [...data.slots];
+      nextSlots[slotIndex] = updatedSlot;
+
+      const nextRoster = data.roster.map((m) =>
+        m.id === booking.staffId
+          ? { ...m, totalBookedHours: Math.round((m.totalBookedHours + durationHours) * 10) / 10 }
+          : m
+      );
+
+      transaction.set(docRef, {
+        adminKey: data.config.adminKey,
+        publicKey: data.config.publicKey,
+        config: data.config,
+        slots: nextSlots,
+        roster: nextRoster,
+        updatedAt: new Date().toISOString(),
+      });
+
       return {
-        success: false,
-        status: 409,
-        conflict: true,
-        message: 'Slot was just claimed by someone else! Matrix updated.',
+        success: true as const,
+        status: 200 as const,
+        committedSlots: nextSlots,
+        committedRoster: nextRoster,
       };
-    }
+    });
 
-    if (liveSlot.bookings.some((b) => b.staffId === booking.staffId)) {
-      return {
-        success: false,
-        status: 409,
-        conflict: true,
-        message: 'You are already booked for this slot on another device.',
-      };
-    }
-
-    return { success: true, status: 200 };
+    reportConnectivity(true);
+    return result;
   } catch (err) {
-    console.warn('[Firebase] Concurrency check exception, proceeding locally:', err);
+    console.warn('[Firebase] claimShiftAtomic transaction failed, proceeding locally:', err);
+    reportConnectivity(false);
     return { success: true, status: 200 };
   }
 }
+

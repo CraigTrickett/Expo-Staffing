@@ -7,6 +7,7 @@ import {
   formatDate,
   getTimezoneOptions,
   getBrowserTimezone,
+  roundTargetHoursForDisplay,
 } from './utils';
 
 describe('generateNanoKey', () => {
@@ -118,5 +119,27 @@ describe('getTimezoneOptions', () => {
 describe('getBrowserTimezone', () => {
   it('returns a non-empty timezone string', () => {
     expect(getBrowserTimezone().length).toBeGreaterThan(0);
+  });
+});
+
+describe('roundTargetHoursForDisplay', () => {
+  it('rounds a fractional target up to the next whole number', () => {
+    expect(roundTargetHoursForDisplay(3.4)).toBe(4);
+    expect(roundTargetHoursForDisplay(4.8)).toBe(5);
+  });
+
+  it('leaves an already-whole target unchanged', () => {
+    expect(roundTargetHoursForDisplay(4)).toBe(4);
+  });
+
+  it('rounds up even a tiny fraction, never down', () => {
+    expect(roundTargetHoursForDisplay(3.01)).toBe(4);
+  });
+
+  it('treats zero, negative, and non-finite input as zero rather than throwing', () => {
+    expect(roundTargetHoursForDisplay(0)).toBe(0);
+    expect(roundTargetHoursForDisplay(-2)).toBe(0);
+    expect(roundTargetHoursForDisplay(NaN)).toBe(0);
+    expect(roundTargetHoursForDisplay(Infinity)).toBe(0);
   });
 });

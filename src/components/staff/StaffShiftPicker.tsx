@@ -21,7 +21,7 @@ import { ShiftMatrix } from '../grid/ShiftMatrix';
 import { ConfirmationModal } from './ConfirmationModal';
 import { ReleaseShiftModal } from './ReleaseShiftModal';
 import { downloadStaffScheduleIcs } from '@/lib/calendar';
-import { cn, formatDuration, formatTime12h } from '@/lib/utils';
+import { cn, formatDuration, formatTime12h, roundTargetHoursForDisplay } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
 import type { ShiftBooking, TimeSlot } from '@/types';
 
@@ -98,12 +98,22 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
     setJustClaimedSlotId(slotId);
     setTimeout(() => setJustClaimedSlotId(null), 1000);
 
+    // Captured before the claim so the post-claim check below can tell
+    // whether this specific claim is what crossed the target — not just
+    // whether the target happens to currently be met, which would fire
+    // confetti again on every claim after the first time it's reached.
+    const preClaimHours = currentStaff.totalBookedHours;
+
     const success = await claimShift(slotId);
 
-    // If target hours achieved after this claim, trigger confetti
+    // Only celebrate the moment the target is actually crossed.
     if (success && currentEvent) {
       const updatedStaff = useEventStore.getState().currentStaff;
-      if (updatedStaff && updatedStaff.totalBookedHours >= metrics.dynamicTargetHours) {
+      if (
+        updatedStaff &&
+        preClaimHours < metrics.dynamicTargetHours &&
+        updatedStaff.totalBookedHours >= metrics.dynamicTargetHours
+      ) {
         try {
           confetti({
             particleCount: 80,
@@ -196,18 +206,22 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-[#46535e] font-mono font-semibold">
-                Target: {metrics.dynamicTargetHours}h per person
+                Target: ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)}h per person
               </span>
             </div>
             <h1 className="text-2xl font-bold text-[#252a2e] tracking-tight mt-1">
               {currentEvent.title}
             </h1>
             <div className="flex items-center space-x-4 text-xs text-[#46535e] mt-1 flex-wrap gap-y-1">
-              <span className="flex items-center space-x-1">
-                <MapPin className="w-3.5 h-3.5 text-[#7c878e]" />
-                <span>{currentEvent.location}</span>
-              </span>
-              <span>&bull;</span>
+              {currentEvent.location && (
+                <>
+                  <span className="flex items-center space-x-1">
+                    <MapPin className="w-3.5 h-3.5 text-[#7c878e]" />
+                    <span>{currentEvent.location}</span>
+                  </span>
+                  <span>&bull;</span>
+                </>
+              )}
               <span className="flex items-center space-x-1">
                 <Calendar className="w-3.5 h-3.5 text-[#7c878e]" />
                 <span>{currentEvent.startDate} to {currentEvent.endDate}</span>
@@ -290,7 +304,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
                   {myBookedShifts.length} {myBookedShifts.length === 1 ? 'shift' : 'shifts'} booked ({currentStaff.totalBookedHours} hrs)
                 </div>
                 <div className="text-[11px] text-[#b9dcf0]">
-                  Target: {metrics.dynamicTargetHours} hrs &bull; Click to view & sync calendar
+                  Target: ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)} hrs &bull; Click to view & sync calendar
                 </div>
               </div>
             </div>
