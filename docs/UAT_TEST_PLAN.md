@@ -37,6 +37,7 @@ release, **P2** = worth fixing, not blocking.
 | CREATE-08 | Creating an event requires login | Try to reach the create-event form while signed out | Login form shown instead; no way to create an event without authenticating | P0 |
 | CREATE-09 | Timezone defaults to the browser's own, but is visible and editable | Open the wizard, check the Event Timezone field | Pre-filled with a real IANA zone (your browser's own), shown with its current UTC offset, and changeable via dropdown before submitting | P0 |
 | CREATE-10 | Changing the timezone in the wizard actually takes effect | Pick a different timezone than the default, create the event, check its calendar export/invite times | Times reflect the chosen timezone, not the browser's auto-detected one | P0 |
+| CREATE-11 | Wizard page header has All Events + Log Out once signed in | Sign in, land on the wizard page | A small session bar shows "Signed in as X", "All Events", and "Log Out" above the form; "All Events" opens the same panel as the admin dashboard's | P1 |
 
 ## 3. Capacity & Roster Management (Admin)
 
@@ -118,7 +119,7 @@ release, **P2** = worth fixing, not blocking.
 | ID | Test | Steps | Expected Result | Priority |
 |----|------|-------|------------------|----------|
 | MSG-01 | Connectivity badge reflects reality | Watch the header badge through a normal session, then simulate an offline write | Says "Synced" only after a real successful operation; reflects failure after one fails, not just missing config | P0 |
-| MSG-02 | Demo banner matches the demo's actual data | Compare the landing page's demo description against the demo event's real, current config | Numbers match exactly, including after the demo has been modified from its original defaults | P1 |
+| MSG-02 | Wizard page has no demo-promotion banner | Load the landing page while signed out and signed in | No "Explore Demo" section appears anywhere; the demo event still exists and is reachable only via All Events or a direct link, not specially promoted | P2 |
 | MSG-03 | No stale wording about login requirements | Read all copy referencing "no login," "no password," "zero signups" | Every such claim is scoped correctly to *staff* — none imply the admin/creation flow also needs no login | P0 |
 | MSG-04 | Target hours copy matches its own computation | Compare the "Target: Xh per rep" text against total required hours ÷ roster size, computed independently | Matches | P1 |
 | MSG-05 | Error messages are specific enough to act on | Trigger each distinct error state (event not found, database unreachable, wrong password, etc.) | Each produces a message that correctly identifies which of these happened — no generic catch-all that could mislead about the actual cause | P1 |

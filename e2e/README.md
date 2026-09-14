@@ -69,7 +69,7 @@ npx playwright test --ui
   on one device show up on another device's already-open page, without a
   manual reload, since that's the entire point of the Firebase migration.
 - `messaging-truthfulness.spec.ts` — checks specific user-facing claims
-  (the connectivity badge, the demo banner's stats, error visibility)
+  (the connectivity badge, "All Events" accuracy, error visibility)
   against actual system state, rather than trusting the copy.
 
 ## Data hygiene

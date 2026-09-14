@@ -28,25 +28,15 @@ test.describe('User-facing messaging matches reality', () => {
     await expect(badge).toHaveText(/Synced/, { timeout: 10_000 });
   });
 
-  test('the demo banner\'s stats match the demo event\'s actual current data, not fixed text', async ({
-    page,
-  }) => {
+  test('"All Events" is reachable from the wizard page header once signed in', async ({ page }) => {
     await page.goto('/#/');
-    // Whatever the banner claims for capacity/roster, cross-check it
-    // against the real demo event by opening it as admin.
-    const bannerText = await page.locator('text=/staff capacity/').textContent();
-    const capacityInBanner = bannerText?.match(/(\d+)-staff capacity/)?.[1];
-    const rosterInBanner = bannerText?.match(/(\d+)-person roster/)?.[1];
-    expect(capacityInBanner, 'Banner should show a live capacity figure, not be missing one').toBeTruthy();
-    expect(rosterInBanner, 'Banner should show a live roster figure, not be missing one').toBeTruthy();
-
     await loginAsAdmin(page);
-    await page.getByRole('link', { name: 'Admin' }).first().click(); // the demo's Admin link
-    await page.waitForURL(/#\/admin\//);
+    const title = `Header All Events Test ${Date.now()}`;
+    await createEventThroughWizard(page, { title });
 
-    const actualCapacityText = await page.getByText(/^\d+ staff\/shift$/).textContent();
-    const actualCapacity = actualCapacityText?.match(/(\d+) staff\/shift/)?.[1];
-    expect(actualCapacity).toBe(capacityInBanner);
+    await page.goto('/#/');
+    await page.getByRole('button', { name: 'All Events' }).click();
+    await expect(page.getByText(title)).toBeVisible();
   });
 
   test('"All Events" shows exactly the events that actually exist — creating one increases the count, deleting it decreases it back', async ({
