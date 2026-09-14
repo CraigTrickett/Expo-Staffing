@@ -38,8 +38,10 @@ interface EventStoreState {
   releaseShift: (slotId: string, bookingId: string) => Promise<boolean>;
   addRosterMember: (name: string, email?: string) => StaffMember;
   removeRosterMember: (staffId: string) => void;
+  updateRosterMember: (staffId: string, updates: { name?: string; email?: string }) => void;
   updateSlotCapacity: (slotId: string, newCapacity: number) => void;
   updateDefaultSlotCapacity: (newCapacity: number) => void;
+  updateEventTimezone: (newTimezone: string) => void;
   adminAssignStaffToSlot: (slotId: string, staff: StaffMember) => boolean;
   adminRemoveStaffFromSlot: (slotId: string, staffId: string) => void;
   clearError: () => void;
@@ -667,6 +669,64 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     });
   },
 
+  updateRosterMember: (staffId: string, updates: { name?: string; email?: string }) => {
+    const { currentEvent, roster, slots, currentStaff } = get();
+    if (!currentEvent) return;
+
+    const nextName = updates.name?.trim();
+    const nextEmail = updates.email !== undefined ? updates.email.trim() : undefined;
+    if (nextName !== undefined && !nextName) return; // never allow blanking the name
+
+    const nextRoster = roster.map((m) =>
+      m.id === staffId
+        ? {
+            ...m,
+            ...(nextName ? { name: nextName } : {}),
+            ...(nextEmail !== undefined ? { email: nextEmail } : {}),
+          }
+        : m
+    );
+
+    // Bookings store their own snapshot of staffName/staffEmail at claim
+    // time (so shift tiles don't need to look the roster member up) —
+    // keep every existing booking's copy in sync too, or a corrected name
+    // would show on the roster but stay stale on every shift tile and any
+    // calendar export tied to those bookings.
+    const nextSlots = slots.map((slot) => {
+      if (!slot.bookings.some((b) => b.staffId === staffId)) return slot;
+      return {
+        ...slot,
+        bookings: slot.bookings.map((b) =>
+          b.staffId === staffId
+            ? {
+                ...b,
+                ...(nextName ? { staffName: nextName } : {}),
+                ...(nextEmail !== undefined ? { staffEmail: nextEmail } : {}),
+              }
+            : b
+        ),
+      };
+    });
+
+    const updatedCurrentStaff =
+      currentStaff?.id === staffId ? nextRoster.find((m) => m.id === staffId) || currentStaff : currentStaff;
+
+    const nextConfig = touchConfig(currentEvent);
+    storage.saveEvent({
+      config: nextConfig,
+      slots: nextSlots,
+      roster: nextRoster,
+    });
+    syncToRemoteAsAdmin(nextConfig, nextSlots, nextRoster);
+
+    set({
+      currentEvent: nextConfig,
+      slots: nextSlots,
+      roster: nextRoster,
+      currentStaff: updatedCurrentStaff,
+    });
+  },
+
   updateSlotCapacity: (slotId: string, newCapacity: number) => {
     const { currentEvent, slots, roster } = get();
     if (!currentEvent) return;
@@ -723,6 +783,31 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     syncToRemoteAsAdmin(nextConfig, nextSlots, roster);
 
     set({ currentEvent: nextConfig, slots: nextSlots, metrics: nextMetrics });
+  },
+
+  updateEventTimezone: (newTimezone: string) => {
+    const { currentEvent, slots, roster } = get();
+    if (!currentEvent || !newTimezone) return;
+
+    // Slot dates/times are stored as local wall-clock strings (e.g. "9:00
+    // AM on Oct 14"), independent of timezone — correcting a wrong
+    // timezone should fix how those get converted to real UTC moments
+    // for calendar exports, without changing the intended local schedule
+    // itself. No slot data needs to change here, only the config.
+    const nextConfig: EventConfig = {
+      ...currentEvent,
+      timezone: newTimezone,
+      updatedAt: new Date().toISOString(),
+    };
+
+    storage.saveEvent({
+      config: nextConfig,
+      slots,
+      roster,
+    });
+    syncToRemoteAsAdmin(nextConfig, slots, roster);
+
+    set({ currentEvent: nextConfig });
   },
 
   adminAssignStaffToSlot: (slotId: string, staff: StaffMember): boolean => {

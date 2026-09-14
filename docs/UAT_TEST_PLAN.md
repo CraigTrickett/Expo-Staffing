@@ -35,6 +35,8 @@ release, **P2** = worth fixing, not blocking.
 | CREATE-06 | Blank location is accepted | Leave location empty, submit | Event created; location-dependent UI (e.g. "Location:" rows) gracefully omits itself rather than showing "undefined" | P1 |
 | CREATE-07 | End date before start date | Set an end date earlier than the start date | Either blocked by the date input's own constraints, or the app falls back sensibly (does not crash or generate negative-duration slots) | P1 |
 | CREATE-08 | Creating an event requires login | Try to reach the create-event form while signed out | Login form shown instead; no way to create an event without authenticating | P0 |
+| CREATE-09 | Timezone defaults to the browser's own, but is visible and editable | Open the wizard, check the Event Timezone field | Pre-filled with a real IANA zone (your browser's own), shown with its current UTC offset, and changeable via dropdown before submitting | P0 |
+| CREATE-10 | Changing the timezone in the wizard actually takes effect | Pick a different timezone than the default, create the event, check its calendar export/invite times | Times reflect the chosen timezone, not the browser's auto-detected one | P0 |
 
 ## 3. Capacity & Roster Management (Admin)
 
@@ -49,6 +51,10 @@ release, **P2** = worth fixing, not blocking.
 | ADMIN-07 | Manually remove staff from a slot | Remove an assignment via the admin panel | Slot returns to open; person's hours update down | P0 |
 | ADMIN-08 | Target hours recalculates as roster changes | Note the displayed "Target: Xh per rep", add/remove roster members | The figure changes to reflect the new roster size — it is computed live, not fixed at event creation | P0 (regression: this used to be a static, organizer-entered number) |
 | ADMIN-09 | Zero-hours drawer accuracy | Open "Zero Hours", compare the listed names against who actually has 0 booked hours | Exact match — no one with bookings appears, no one without bookings is missing | P1 |
+| ADMIN-10 | Timezone is editable after creation | In the coverage panel, change the Timezone dropdown to a different zone | Takes effect immediately; new calendar exports/invites reflect the corrected zone, without altering any slot's local displayed time | P0 |
+| ADMIN-11 | Edit a roster member's name/email | In Staffing, click the pencil icon on a member, change name and/or email, Save | Updates immediately in the ledger; blank name is rejected with an error rather than silently saved | P1 |
+| ADMIN-12 | Editing a name updates existing bookings too, not just the roster | Edit the name of someone who already has claimed shifts, then check their shift tiles | Shift tiles show the corrected name immediately — not the old one until they re-claim | P1 |
+| ADMIN-13 | Cancel editing leaves the member unchanged | Start editing a member, change the fields, click Cancel | Original name/email are unchanged | P2 |
 
 ## 4. Staff Shift Claiming (No Login)
 
@@ -63,6 +69,7 @@ release, **P2** = worth fixing, not blocking.
 | STAFF-07 | Filter views (All / Needs Staff / My Shifts / Fully Staffed) | Toggle each filter | Slot list updates correctly for each; counts are accurate | P1 |
 | STAFF-08 | Confetti / target-met celebration | Claim enough shifts to reach the current dynamic target | Celebration animation triggers once, not repeatedly on every subsequent claim | P2 |
 | STAFF-09 | Refresh mid-session | Claim a shift, refresh the browser | Still identified as the same person; claimed shift still shows as claimed (identity persists via local storage, data confirmed from the database) | P0 |
+| STAFF-10 | Claiming without an identity selected prompts clearly, doesn't silently fail | With no identity chosen, click "Sign Up for Shift" on any open slot | The identity picker scrolls into view, opens automatically, and briefly highlights, with a toast explaining why — not just a scroll with no explanation | P0 |
 
 ## 5. Calendar Export
 

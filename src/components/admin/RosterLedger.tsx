@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock,
   Mail,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -14,12 +15,14 @@ import {
 } from 'lucide-react';
 import type { StaffMember } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/common/Toast';
 
 interface RosterLedgerProps {
   roster: StaffMember[];
   targetHours: number;
   onAddMember: (name: string, email?: string) => void;
   onRemoveMember: (staffId: string) => void;
+  onUpdateMember?: (staffId: string, updates: { name?: string; email?: string }) => void;
   filterZeroHoursOnly?: boolean;
 }
 
@@ -28,6 +31,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
   targetHours,
   onAddMember,
   onRemoveMember,
+  onUpdateMember,
   filterZeroHoursOnly = false,
 }) => {
   const [nameInput, setNameInput] = useState('');
@@ -37,6 +41,33 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
     filterZeroHoursOnly ? 'zero' : 'all'
   );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
+  const startEditing = (member: StaffMember) => {
+    setEditingId(member.id);
+    setEditName(member.name);
+    setEditEmail(member.email);
+    setConfirmDeleteId(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditEmail('');
+  };
+
+  const saveEditing = () => {
+    if (!editingId) return;
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      toast.error('Name cannot be blank.', 'Invalid Name');
+      return;
+    }
+    onUpdateMember?.(editingId, { name: trimmedName, email: editEmail.trim() });
+    setEditingId(null);
+  };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,35 +246,57 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                   >
                     {/* Name & Badge */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2.5">
-                        <div
-                          className={cn(
-                            'w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0',
-                            isMet
-                              ? 'bg-[#e6f5ec] text-[#00823b] border border-[#a3e0be]'
-                              : isZero
-                                ? 'bg-[#fef8e8] text-[#8a5800] border border-[#f7c970]'
-                                : 'bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0]'
-                          )}
-                        >
-                          {member.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-[#252a2e]">
-                            {member.name}
+                      {editingId === member.id ? (
+                        <input
+                          type="text"
+                          maxLength={100}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          autoFocus
+                          className="w-full bg-white border border-[#0063a3] rounded px-2 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25"
+                        />
+                      ) : (
+                        <div className="flex items-center space-x-2.5">
+                          <div
+                            className={cn(
+                              'w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0',
+                              isMet
+                                ? 'bg-[#e6f5ec] text-[#00823b] border border-[#a3e0be]'
+                                : isZero
+                                  ? 'bg-[#fef8e8] text-[#8a5800] border border-[#f7c970]'
+                                  : 'bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0]'
+                            )}
+                          >
+                            {member.name.charAt(0).toUpperCase()}
                           </div>
-                          {isZero && (
-                            <span className="inline-flex items-center text-[10px] text-[#8a5800] font-semibold">
-                              0 hours booked
-                            </span>
-                          )}
+                          <div>
+                            <div className="font-semibold text-[#252a2e]">
+                              {member.name}
+                            </div>
+                            {isZero && (
+                              <span className="inline-flex items-center text-[10px] text-[#8a5800] font-semibold">
+                                0 hours booked
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </td>
 
                     {/* Email */}
                     <td className="py-3 px-4 text-[#46535e] font-mono text-[11px]">
-                      {member.email}
+                      {editingId === member.id ? (
+                        <input
+                          type="email"
+                          maxLength={254}
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="Optional"
+                          className="w-full bg-white border border-[#0063a3] rounded px-2 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 placeholder:text-[#7c878e]"
+                        />
+                      ) : (
+                        member.email
+                      )}
                     </td>
 
                     {/* Commitment Stats */}
@@ -298,7 +351,24 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
 
                     {/* Actions */}
                     <td className="py-3 px-4 text-right">
-                      {confirmDeleteId === member.id ? (
+                      {editingId === member.id ? (
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            type="button"
+                            onClick={saveEditing}
+                            className="px-2 py-1 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-[11px] font-semibold cursor-pointer"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditing}
+                            className="px-2 py-1 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-[11px] cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : confirmDeleteId === member.id ? (
                         <div className="flex items-center justify-end space-x-1">
                           <button
                             type="button"
@@ -319,14 +389,26 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(member.id)}
-                          className="p-1.5 text-[#7c878e] hover:text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors cursor-pointer"
-                          title={`Remove ${member.name} from roster`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end space-x-1">
+                          {onUpdateMember && (
+                            <button
+                              type="button"
+                              onClick={() => startEditing(member)}
+                              className="p-1.5 text-[#7c878e] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer"
+                              title={`Edit ${member.name}'s details`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(member.id)}
+                            className="p-1.5 text-[#7c878e] hover:text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors cursor-pointer"
+                            title={`Remove ${member.name} from roster`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

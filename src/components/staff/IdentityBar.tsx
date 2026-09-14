@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -22,6 +22,13 @@ interface IdentityBarProps {
   targetHours: number;
   onSelectStaff: (staffId: string) => void;
   onAddNewStaff: (name: string, email?: string) => void;
+  /**
+   * Increment this (e.g. from a click count) to force the picker open and
+   * draw attention to it — used when someone tries to claim a shift
+   * without having selected who they are yet, so the required action is
+   * obvious rather than a silent scroll with no explanation.
+   */
+  forceOpenTrigger?: number;
 }
 
 export const IdentityBar: React.FC<IdentityBarProps> = ({
@@ -30,12 +37,22 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
   targetHours,
   onSelectStaff,
   onAddNewStaff,
+  forceOpenTrigger,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const addModalRef = useModalA11y(showAddModal, () => setShowAddModal(false));
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [isPulsing, setIsPulsing] = useState(false);
+
+  useEffect(() => {
+    if (!forceOpenTrigger) return;
+    setIsOpen(true);
+    setIsPulsing(true);
+    const timer = setTimeout(() => setIsPulsing(false), 1600);
+    return () => clearTimeout(timer);
+  }, [forceOpenTrigger]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +72,13 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
 
   return (
     <>
-      <div className="bg-white border-b border-[#d8dce0] sticky top-14 z-30 shadow-modus-1 backdrop-blur-md">
+      <div
+        id="identity-bar"
+        className={cn(
+          'bg-white border-b border-[#d8dce0] sticky top-14 z-30 shadow-modus-1 backdrop-blur-md transition-shadow duration-300',
+          isPulsing && 'ring-2 ring-[#fbad26] ring-inset'
+        )}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           {!currentStaff ? (
             /* Unclaimed state: Prominent prompt */

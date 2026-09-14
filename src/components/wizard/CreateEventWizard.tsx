@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Calendar,
   Clock,
@@ -12,10 +12,11 @@ import {
   Minus,
   FileText,
   MapPin,
+  Globe,
   HelpCircle,
 } from 'lucide-react';
 import type { SlotDuration } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getBrowserTimezone, getTimezoneOptions } from '@/lib/utils';
 import { useEventStore } from '@/store/useEventStore';
 
 interface CreateEventWizardProps {
@@ -35,6 +36,8 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
   // Form State
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
+  const [timezone, setTimezone] = useState(getBrowserTimezone());
+  const timezoneOptions = useMemo(() => getTimezoneOptions(), []);
   const [startDate, setStartDate] = useState(formatDateInput(defaultStart));
   const [endDate, setEndDate] = useState(formatDateInput(defaultEnd));
   const [dailyStartTime, setDailyStartTime] = useState('09:00');
@@ -97,6 +100,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     const createdEvent = useEventStore.getState().createEvent({
       title,
       location: location.trim(),
+      timezone,
       startDate,
       endDate,
       dailyStartTime,
@@ -209,6 +213,31 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="wizard-timezone" className="block text-xs font-semibold text-[#252a2e] mb-1.5">
+                Event Timezone
+              </label>
+              <div className="relative">
+                <Globe className="w-4 h-4 text-[#7c878e] absolute left-3.5 top-2.5" />
+                <select
+                  id="wizard-timezone"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors appearance-none"
+                >
+                  {timezoneOptions.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-[#7c878e] mt-1">
+                Defaults to your own browser's timezone — confirm or change this to match the venue,
+                not wherever you happen to be creating this event from.
+              </p>
             </div>
           </div>
         </div>

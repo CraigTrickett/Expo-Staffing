@@ -22,6 +22,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { ReleaseShiftModal } from './ReleaseShiftModal';
 import { downloadStaffScheduleIcs } from '@/lib/calendar';
 import { cn, formatDuration, formatTime12h } from '@/lib/utils';
+import { toast } from '@/components/common/Toast';
 import type { ShiftBooking, TimeSlot } from '@/types';
 
 interface StaffShiftPickerProps {
@@ -46,6 +47,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
   } = useEventStore();
 
   const [slotToCancel, setSlotToCancel] = useState<{ slot: TimeSlot; booking: ShiftBooking } | null>(null);
+  const [identityPromptTrigger, setIdentityPromptTrigger] = useState(0);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [justClaimedSlotId, setJustClaimedSlotId] = useState<string | null>(null);
 
@@ -67,8 +69,12 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
   // Handle shift click from matrix
   const handleSlotClick = async (slotId: string) => {
     if (!currentStaff) {
-      // Scroll to identity bar or prompt user
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Make it unmistakable what to do next: scroll the identity picker
+      // into view, force it open, give it a brief highlight, and say why
+      // — rather than a silent scroll with no explanation.
+      document.getElementById('identity-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIdentityPromptTrigger((n) => n + 1);
+      toast.info('Select your name first, then claim this shift.', 'Who Are You?');
       return;
     }
 
@@ -164,6 +170,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
         targetHours={metrics.dynamicTargetHours}
         onSelectStaff={(staffId) => claimIdentity(staffId)}
         onAddNewStaff={(name, email) => claimIdentity('new', name, email)}
+        forceOpenTrigger={identityPromptTrigger}
       />
 
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">

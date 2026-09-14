@@ -47,8 +47,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
     loadEventByKey,
     addRosterMember,
     removeRosterMember,
+    updateRosterMember,
     updateSlotCapacity,
     updateDefaultSlotCapacity,
+    updateEventTimezone,
     adminAssignStaffToSlot,
     adminRemoveStaffFromSlot,
     clearError,
@@ -177,6 +179,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
         onOpenZeroHoursDrawer={() => setShowZeroHoursDrawer(true)}
         onOpenShareModal={() => setShowShareModal(true)}
         onUpdateDefaultCapacity={updateDefaultSlotCapacity}
+        onUpdateTimezone={updateEventTimezone}
       />
 
       {/* View Switcher / Sub-navigation */}
@@ -275,6 +278,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
           targetHours={metrics.dynamicTargetHours}
           onAddMember={addRosterMember}
           onRemoveMember={removeRosterMember}
+          onUpdateMember={updateRosterMember}
         />
       )}
 

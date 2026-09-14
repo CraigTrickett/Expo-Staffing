@@ -6,13 +6,14 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  Globe,
   Minus,
   Plus,
   Share2,
   Users,
 } from 'lucide-react';
 import type { EventConfig, EventMetrics, StaffMember } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getTimezoneOptions } from '@/lib/utils';
 import { downloadEventIcs } from '@/lib/calendar';
 
 interface CoverageStatsProps {
@@ -23,6 +24,7 @@ interface CoverageStatsProps {
   zeroHoursCount: number;
   onOpenShareModal?: () => void;
   onUpdateDefaultCapacity?: (newCapacity: number) => void;
+  onUpdateTimezone?: (newTimezone: string) => void;
 }
 
 export const CoverageStats: React.FC<CoverageStatsProps> = ({
@@ -33,8 +35,10 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
   zeroHoursCount,
   onOpenShareModal,
   onUpdateDefaultCapacity,
+  onUpdateTimezone,
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const timezoneOptions = React.useMemo(() => getTimezoneOptions(), []);
 
   const percent = Math.min(100, Math.max(0, metrics.overallCoveragePercent));
   const isOptimal = percent >= 90;
@@ -293,6 +297,28 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
                 </div>
               ) : (
                 <span className="font-mono font-semibold text-[#252a2e]">{config.staffCapacityPerSlot} staff/shift</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#46535e] flex items-center gap-1">
+                <Globe className="w-3 h-3" />
+                Timezone:
+              </span>
+              {onUpdateTimezone ? (
+                <select
+                  value={config.timezone}
+                  onChange={(e) => onUpdateTimezone(e.target.value)}
+                  className="focus-ring bg-white border border-[#d8dce0] rounded text-xs font-mono font-semibold text-[#252a2e] py-1 pl-2 pr-1 max-w-[220px] cursor-pointer"
+                  title="Correct this if it doesn't match the actual venue's timezone"
+                >
+                  {timezoneOptions.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-mono font-semibold text-[#252a2e]">{config.timezone}</span>
               )}
             </div>
           </div>

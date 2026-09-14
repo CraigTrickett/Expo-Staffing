@@ -250,10 +250,10 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
             return (
               <div
                 key={dateString}
-                className="bg-[#f8f9fa] border border-[#d8dce0] rounded overflow-hidden flex flex-col shadow-modus-1"
+                className="bg-[#f8f9fa] border border-[#d8dce0] rounded flex flex-col shadow-modus-1"
               >
                 {/* Column Sticky Header */}
-                <div className="sticky top-16 z-20 px-4 py-3 bg-white border-b border-[#d8dce0] backdrop-blur-md flex items-center justify-between">
+                <div className="sticky top-16 z-20 rounded-t px-4 py-3 bg-white border-b border-[#d8dce0] backdrop-blur-md flex items-center justify-between">
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-[#0063a3] font-mono">

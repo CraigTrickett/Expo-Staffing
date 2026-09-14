@@ -5,6 +5,8 @@ import {
   formatDuration,
   calculateSlotDurationMinutes,
   formatDate,
+  getTimezoneOptions,
+  getBrowserTimezone,
 } from './utils';
 
 describe('generateNanoKey', () => {
@@ -88,5 +90,33 @@ describe('formatDate', () => {
 
   it('returns an empty string for empty input rather than "Invalid Date"', () => {
     expect(formatDate('')).toBe('');
+  });
+});
+
+describe('getTimezoneOptions', () => {
+  it('returns a non-empty, alphabetically sorted list of real IANA zones', () => {
+    const options = getTimezoneOptions();
+    expect(options.length).toBeGreaterThan(50);
+    const values = options.map((o) => o.value);
+    expect([...values].sort((a, b) => a.localeCompare(b))).toEqual(values);
+  });
+
+  it('includes well-known zones with a readable UTC-offset label', () => {
+    const options = getTimezoneOptions();
+    const la = options.find((o) => o.value === 'America/Los_Angeles');
+    expect(la).toBeDefined();
+    expect(la!.label).toMatch(/America\/Los_Angeles \(GMT[+-]\d+\)/);
+  });
+
+  it('every option is a valid, distinct IANA identifier', () => {
+    const options = getTimezoneOptions();
+    const values = options.map((o) => o.value);
+    expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('getBrowserTimezone', () => {
+  it('returns a non-empty timezone string', () => {
+    expect(getBrowserTimezone().length).toBeGreaterThan(0);
   });
 });

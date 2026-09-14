@@ -126,3 +126,55 @@ export function formatDate(dateString: string): string {
     year: 'numeric',
   });
 }
+
+/**
+ * Best-effort detection of the current browser's IANA timezone, used only
+ * as a starting *suggestion* — the organizer can and should confirm or
+ * change it, since it reflects whoever's browser is creating the event,
+ * not necessarily the actual venue's timezone.
+ */
+export function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
+  } catch {
+    return 'America/Los_Angeles';
+  }
+}
+
+export interface TimezoneOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Every IANA timezone the current runtime supports, each labeled with its
+ * current UTC offset (e.g. "America/Los_Angeles (GMT-7)") so picking the
+ * right one doesn't require already knowing the IANA name by heart.
+ */
+export function getTimezoneOptions(): TimezoneOption[] {
+  let zones: string[];
+  try {
+    zones = Intl.supportedValuesOf('timeZone');
+  } catch {
+    zones = [getBrowserTimezone()];
+  }
+
+  return zones
+    .map((zone) => {
+      let offsetLabel = '';
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          timeZoneName: 'shortOffset',
+        }).formatToParts(new Date());
+        offsetLabel = parts.find((p) => p.type === 'timeZoneName')?.value || '';
+      } catch {
+        // Leave blank for a zone the formatter can't label; still usable.
+      }
+      return {
+        value: zone,
+        label: offsetLabel ? `${zone} (${offsetLabel})` : zone,
+      };
+    })
+    .sort((a, b) => a.value.localeCompare(b.value));
+}
