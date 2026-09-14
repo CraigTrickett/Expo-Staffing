@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Globe,
   Minus,
+  Pencil,
   Plus,
   Share2,
   Users,
@@ -15,6 +16,7 @@ import {
 import type { EventConfig, EventMetrics, StaffMember } from '@/types';
 import { cn, getTimezoneOptions } from '@/lib/utils';
 import { downloadEventIcs } from '@/lib/calendar';
+import { toast } from '@/components/common/Toast';
 
 interface CoverageStatsProps {
   config: EventConfig;
@@ -25,6 +27,7 @@ interface CoverageStatsProps {
   onOpenShareModal?: () => void;
   onUpdateDefaultCapacity?: (newCapacity: number) => void;
   onUpdateTimezone?: (newTimezone: string) => void;
+  onUpdateEventDetails?: (updates: { title: string; location: string }) => void;
 }
 
 export const CoverageStats: React.FC<CoverageStatsProps> = ({
@@ -36,9 +39,13 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
   onOpenShareModal,
   onUpdateDefaultCapacity,
   onUpdateTimezone,
+  onUpdateEventDetails,
 }) => {
   const [copied, setCopied] = React.useState(false);
   const timezoneOptions = React.useMemo(() => getTimezoneOptions(), []);
+  const [isEditingDetails, setIsEditingDetails] = React.useState(false);
+  const [editTitle, setEditTitle] = React.useState(config.title);
+  const [editLocation, setEditLocation] = React.useState(config.location);
 
   const percent = Math.min(100, Math.max(0, metrics.overallCoveragePercent));
   const isOptimal = percent >= 90;
@@ -70,20 +77,79 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#fef8e8] text-[#8a5800] border border-[#f7c970] uppercase tracking-wider">
               Admin
             </span>
-            <span className="text-xs text-[#7c878e] font-mono">
-              Admin Key: <code className="text-[#252a2e] font-bold">{config.adminKey}</code>
-            </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#252a2e] tracking-tight mt-1">
-            {config.title}
-          </h1>
-          <p className="text-xs text-[#46535e] mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <span>{config.location}</span>
-            <span>&bull;</span>
-            <span>{config.startDate} to {config.endDate}</span>
-            <span>&bull;</span>
-            <span>{config.dailyStartTime} - {config.dailyEndTime} ({config.slotDurationMinutes}m shifts)</span>
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            {isEditingDetails ? (
+              <input
+                type="text"
+                maxLength={150}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                autoFocus
+                className="text-xl sm:text-2xl font-bold text-[#252a2e] tracking-tight bg-white border border-[#0063a3] rounded px-2 py-0.5 focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 w-full max-w-md"
+              />
+            ) : (
+              <h1 className="text-xl sm:text-2xl font-bold text-[#252a2e] tracking-tight">
+                {config.title}
+              </h1>
+            )}
+            {onUpdateEventDetails && !isEditingDetails && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditTitle(config.title);
+                  setEditLocation(config.location);
+                  setIsEditingDetails(true);
+                }}
+                className="focus-ring p-1 text-[#7c878e] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer shrink-0"
+                title="Edit event name and location"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {isEditingDetails ? (
+            <div className="flex items-center gap-2 mt-1.5">
+              <input
+                type="text"
+                maxLength={200}
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                placeholder="Location & booth details"
+                className="text-xs text-[#252a2e] bg-white border border-[#0063a3] rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 w-full max-w-sm placeholder:text-[#7c878e]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmedTitle = editTitle.trim();
+                  if (!trimmedTitle) {
+                    toast.error('Event name cannot be blank.', 'Invalid Name');
+                    return;
+                  }
+                  onUpdateEventDetails?.({ title: trimmedTitle, location: editLocation.trim() });
+                  setIsEditingDetails(false);
+                }}
+                className="px-2.5 py-1 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-[11px] font-semibold cursor-pointer shrink-0"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditingDetails(false)}
+                className="px-2.5 py-1 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-[11px] cursor-pointer shrink-0"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-[#46535e] mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span>{config.location}</span>
+              <span>&bull;</span>
+              <span>{config.startDate} to {config.endDate}</span>
+              <span>&bull;</span>
+              <span>{config.dailyStartTime} - {config.dailyEndTime} ({config.slotDurationMinutes}m shifts)</span>
+            </p>
+          )}
         </div>
 
         {/* Public invite link bar */}

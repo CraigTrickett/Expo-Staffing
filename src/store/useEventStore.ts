@@ -42,6 +42,7 @@ interface EventStoreState {
   updateSlotCapacity: (slotId: string, newCapacity: number) => void;
   updateDefaultSlotCapacity: (newCapacity: number) => void;
   updateEventTimezone: (newTimezone: string) => void;
+  updateEventDetails: (updates: { title: string; location: string }) => void;
   adminAssignStaffToSlot: (slotId: string, staff: StaffMember) => boolean;
   adminRemoveStaffFromSlot: (slotId: string, staffId: string) => void;
   clearError: () => void;
@@ -797,6 +798,30 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     const nextConfig: EventConfig = {
       ...currentEvent,
       timezone: newTimezone,
+      updatedAt: new Date().toISOString(),
+    };
+
+    storage.saveEvent({
+      config: nextConfig,
+      slots,
+      roster,
+    });
+    syncToRemoteAsAdmin(nextConfig, slots, roster);
+
+    set({ currentEvent: nextConfig });
+  },
+
+  updateEventDetails: (updates: { title: string; location: string }) => {
+    const { currentEvent, slots, roster } = get();
+    if (!currentEvent) return;
+
+    const trimmedTitle = updates.title.trim();
+    if (!trimmedTitle) return; // never allow blanking the event name
+
+    const nextConfig: EventConfig = {
+      ...currentEvent,
+      title: trimmedTitle,
+      location: updates.location.trim(),
       updatedAt: new Date().toISOString(),
     };
 

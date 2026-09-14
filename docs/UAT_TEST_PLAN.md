@@ -55,6 +55,7 @@ release, **P2** = worth fixing, not blocking.
 | ADMIN-11 | Edit a roster member's name/email | In Staffing, click the pencil icon on a member, change name and/or email, Save | Updates immediately in the ledger; blank name is rejected with an error rather than silently saved | P1 |
 | ADMIN-12 | Editing a name updates existing bookings too, not just the roster | Edit the name of someone who already has claimed shifts, then check their shift tiles | Shift tiles show the corrected name immediately — not the old one until they re-claim | P1 |
 | ADMIN-13 | Cancel editing leaves the member unchanged | Start editing a member, change the fields, click Cancel | Original name/email are unchanged | P2 |
+| ADMIN-14 | Edit event name and location | Click the pencil icon next to the event title, change name and/or location, Save | Updates immediately everywhere the title/location is shown (nav, staff view, exports); blank name is rejected | P1 |
 
 ## 4. Staff Shift Claiming (No Login)
 

@@ -51,6 +51,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
     updateSlotCapacity,
     updateDefaultSlotCapacity,
     updateEventTimezone,
+    updateEventDetails,
     adminAssignStaffToSlot,
     adminRemoveStaffFromSlot,
     clearError,
@@ -180,6 +181,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
         onOpenShareModal={() => setShowShareModal(true)}
         onUpdateDefaultCapacity={updateDefaultSlotCapacity}
         onUpdateTimezone={updateEventTimezone}
+        onUpdateEventDetails={updateEventDetails}
       />
 
       {/* View Switcher / Sub-navigation */}
