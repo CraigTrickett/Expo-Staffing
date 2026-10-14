@@ -10,6 +10,7 @@ import { isFirebaseConfigured, subscribeToAdminAuth, signOutAdmin } from '@/lib/
 import { useEventStore } from '@/store/useEventStore';
 import type { EventConfig } from '@/types';
 import { History, Loader2, Shield } from 'lucide-react';
+import { useModalA11y } from '@/lib/hooks';
 
 type RouteState =
   | { name: 'wizard' }
@@ -99,7 +100,7 @@ export default function App() {
                 Signed in as <span className="font-semibold text-[#252a2e]">{adminEmail}</span>
               </span>
             ) : (
-              <span className="text-[#7c878e]">
+              <span className="text-[#5b6770]">
                 Expo Staffing Workspace
               </span>
             )}
@@ -147,21 +148,7 @@ export default function App() {
             />
           )}
 
-          {showAdminLoginModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
-              <div className="relative w-full max-w-sm">
-                <button
-                  type="button"
-                  onClick={() => setShowAdminLoginModal(false)}
-                  className="absolute right-3 top-3 z-10 p-1 rounded-full text-[#7c878e] hover:text-[#252a2e] hover:bg-[#f1f3f6]"
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
-                <AdminLogin />
-              </div>
-            </div>
-          )}
+          {showAdminLoginModal && <AdminLoginDialog onClose={() => setShowAdminLoginModal(false)} />}
         </div>
       )}
 
@@ -198,5 +185,31 @@ export default function App() {
         />
       )}
     </Layout>
+  );
+}
+
+function AdminLoginDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useModalA11y(true, onClose);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Admin sign in"
+        className="modal-panel relative w-full max-w-sm focus:outline-hidden"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="focus-ring absolute right-3 top-3 z-10 p-1 rounded-full text-[#5b6770] hover:text-[#252a2e] hover:bg-[#f1f3f6] cursor-pointer"
+          aria-label="Close"
+        >
+          &times;
+        </button>
+        <AdminLogin />
+      </div>
+    </div>
   );
 }

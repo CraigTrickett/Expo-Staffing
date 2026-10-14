@@ -67,7 +67,7 @@ export const AdminLogin: React.FC = () => {
               Password
             </label>
             <div className="relative">
-              <Lock className="w-3.5 h-3.5 text-[#7c878e] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-3.5 h-3.5 text-[#5b6770] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 id="admin-password"
                 type="password"

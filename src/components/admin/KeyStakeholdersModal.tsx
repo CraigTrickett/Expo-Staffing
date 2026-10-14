@@ -174,14 +174,14 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="stakeholders-modal-title"
-        className="bg-white border border-[#d8dce0] rounded max-w-5xl w-full max-h-[92vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
+        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-5xl w-full max-h-[92vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
       >
         {/* Header */}
         <div className="p-5 border-b border-[#d8dce0] bg-[#f8f9fa]">
@@ -200,7 +200,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0063a3]">
                     Event Administration Hub
                   </span>
-                  <span className="text-[#7c878e]">&bull;</span>
+                  <span className="text-[#5b6770]">&bull;</span>
                   <span className="text-xs text-[#46535e]">{event.title}</span>
                 </div>
                 <h2 id="stakeholders-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5 flex items-center gap-2">
@@ -229,7 +229,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer"
+                className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -241,7 +241,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
           <div className="mt-4 pt-3 border-t border-[#e5e9ec] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
             {/* Search */}
             <div className="relative flex-1 max-w-sm">
-              <Search className="w-3.5 h-3.5 text-[#7c878e] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#5b6770] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
@@ -254,7 +254,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             {/* Dropdown Filters */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#7c878e] text-[11px] font-semibold">Team:</span>
+                <span className="text-[#5b6770] text-[11px] font-semibold">Team:</span>
                 <select
                   value={selectedTeamFilter}
                   onChange={(e) => setSelectedTeamFilter(e.target.value)}
@@ -269,7 +269,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#7c878e] text-[11px] font-semibold">Involved With:</span>
+                <span className="text-[#5b6770] text-[11px] font-semibold">Involved With:</span>
                 <select
                   value={selectedAreaFilter}
                   onChange={(e) => setSelectedAreaFilter(e.target.value)}
@@ -293,7 +293,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
           {isFormOpen && (
             <form
               onSubmit={handleSubmit}
-              className="bg-[#f0f7fb] border border-[#b9dcf0] rounded p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150 shadow-sm"
+              className="bg-[#f0f7fb] border border-[#b9dcf0] rounded p-5 space-y-4 animate-[rise-in_220ms_cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-[#0063a3] flex items-center gap-1.5">
@@ -303,7 +303,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="text-xs text-[#7c878e] hover:text-[#252a2e] cursor-pointer"
+                  className="text-xs text-[#5b6770] hover:text-[#252a2e] cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -433,7 +433,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                     type="checkbox"
                     checked={alsoAddToBoothRoster}
                     onChange={(e) => setAlsoAddToBoothRoster(e.target.checked)}
-                    className="rounded text-[#0063a3] focus:ring-[#0063a3]"
+                    className="rounded accent-[#0063a3] cursor-pointer"
                   />
                   <span>Also sync this stakeholder into the Booth Staffing Roster for shift claiming</span>
                 </label>
@@ -458,7 +458,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
           )}
 
           {/* Directory Count */}
-          <div className="flex items-center justify-between text-xs text-[#7c878e]">
+          <div className="flex items-center justify-between text-xs text-[#5b6770]">
             <span>
               Showing <span className="font-semibold text-[#252a2e]">{filteredStakeholders.length}</span> stakeholders
             </span>
@@ -472,7 +472,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-[#f8f9fa] border-b border-[#d8dce0] text-[#7c878e] font-semibold">
+                  <tr className="bg-[#f8f9fa] border-b border-[#d8dce0] text-[#5b6770] font-semibold">
                     <th className="py-2.5 px-4">Stakeholder</th>
                     <th className="py-2.5 px-4">Team</th>
                     <th className="py-2.5 px-4">Involved With</th>
@@ -489,7 +489,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                           {s.firstName} {s.lastName}
                         </div>
                         {s.notes && (
-                          <div className="text-[11px] text-[#7c878e] mt-0.5 line-clamp-1">
+                          <div className="text-[11px] text-[#5b6770] mt-0.5 line-clamp-1">
                             {s.notes}
                           </div>
                         )}
@@ -519,7 +519,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                               </span>
                             ))
                           ) : (
-                            <span className="text-[11px] text-[#7c878e]">—</span>
+                            <span className="text-[11px] text-[#5b6770]">—</span>
                           )}
                         </div>
                       </td>
@@ -527,12 +527,12 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                       {/* Contact */}
                       <td className="py-3 px-4 text-[11px] text-[#46535e]">
                         <div className="flex items-center gap-1.5">
-                          <Mail className="w-3 h-3 text-[#7c878e] shrink-0" />
+                          <Mail className="w-3 h-3 text-[#5b6770] shrink-0" />
                           <span className="truncate">{s.email}</span>
                         </div>
                         {s.phone && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <Phone className="w-3 h-3 text-[#7c878e] shrink-0" />
+                            <Phone className="w-3 h-3 text-[#5b6770] shrink-0" />
                             <span>{s.phone}</span>
                           </div>
                         )}
@@ -566,7 +566,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             </div>
 
             {filteredStakeholders.length === 0 && (
-              <div className="py-12 text-center text-xs text-[#7c878e] space-y-2">
+              <div className="py-12 text-center text-xs text-[#5b6770] space-y-2">
                 <p>No stakeholders found matching your filters.</p>
                 <button
                   type="button"
@@ -594,7 +594,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             <span>Back to Admin Hub</span>
           </button>
 
-          <span className="text-[11px] text-[#7c878e] hidden sm:inline">
+          <span className="text-[11px] text-[#5b6770] hidden sm:inline">
             Changes save automatically to event data
           </span>
 

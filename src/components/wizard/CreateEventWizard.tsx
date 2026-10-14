@@ -136,7 +136,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
 
         {/* Quick Presets */}
         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-          <span className="text-xs text-[#7c878e] font-semibold mr-1">Presets:</span>
+          <span className="text-xs text-[#5b6770] font-semibold mr-1">Presets:</span>
           <button
             type="button"
             onClick={() => applyPreset('tech-expo')}
@@ -193,7 +193,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., AWS re:Invent Expo Booth #1420"
-                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
+                className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#5b6770] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
               />
             </div>
 
@@ -202,7 +202,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 Location &amp; Booth Details
               </label>
               <div className="relative">
-                <MapPin className="w-4 h-4 text-[#7c878e] absolute left-3.5 top-2.5" />
+                <MapPin className="w-4 h-4 text-[#5b6770] absolute left-3.5 top-2.5" />
                 <input
                   id="wizard-location"
                   type="text"
@@ -210,7 +210,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., Venetian Expo Hall, Las Vegas, NV (Booth 1420)"
-                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
+                  className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded pl-10 pr-3.5 py-2 text-sm text-[#252a2e] placeholder:text-[#5b6770] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors"
                 />
               </div>
             </div>
@@ -220,7 +220,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 Event Timezone
               </label>
               <div className="relative">
-                <Globe className="w-4 h-4 text-[#7c878e] absolute left-3.5 top-2.5" />
+                <Globe className="w-4 h-4 text-[#5b6770] absolute left-3.5 top-2.5" />
                 <select
                   id="wizard-timezone"
                   value={timezone}
@@ -234,7 +234,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   ))}
                 </select>
               </div>
-              <p className="text-[11px] text-[#7c878e] mt-1">
+              <p className="text-[11px] text-[#5b6770] mt-1">
                 Defaults to your own browser's timezone — confirm or change this to match the venue,
                 not wherever you happen to be creating this event from.
               </p>
@@ -287,7 +287,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 Daily Booth Opens (Start Time)
               </label>
               <div className="relative">
-                <Clock className="w-4 h-4 text-[#7c878e] absolute left-3.5 top-2.5" />
+                <Clock className="w-4 h-4 text-[#5b6770] absolute left-3.5 top-2.5" />
                 <input
                   id="wizard-start-time"
                   type="time"
@@ -304,7 +304,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 Daily Booth Closes (End Time)
               </label>
               <div className="relative">
-                <Clock className="w-4 h-4 text-[#7c878e] absolute left-3.5 top-2.5" />
+                <Clock className="w-4 h-4 text-[#5b6770] absolute left-3.5 top-2.5" />
                 <input
                   id="wizard-end-time"
                   type="time"
@@ -381,7 +381,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-[11px] text-[#7c878e] mt-1">Simultaneous reps per time block</p>
+              <p className="text-[11px] text-[#5b6770] mt-1">Simultaneous reps per time block</p>
             </div>
 
             {/* Target Hours Per Rep — now calculated automatically */}
@@ -392,7 +392,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               <div className="w-full bg-[#f8f9fa] border border-[#d8dce0] rounded px-3.5 py-2 text-sm text-[#46535e] flex items-center h-[38px]">
                 Calculated automatically
               </div>
-              <p className="text-[11px] text-[#7c878e] mt-1">
+              <p className="text-[11px] text-[#5b6770] mt-1">
                 Total required hours &divide; roster size, updated live as staff join
               </p>
             </div>
@@ -408,7 +408,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               <Users className="w-3.5 h-3.5" />
               <span>4. Roster Quick-Paste (Optional)</span>
             </div>
-            <span className="text-[11px] text-[#7c878e] font-mono">
+            <span className="text-[11px] text-[#5b6770] font-mono">
               {rosterRaw.split(/[\n,]+/).filter((s) => s.trim()).length} members detected
             </span>
           </div>
@@ -419,9 +419,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               value={rosterRaw}
               onChange={(e) => setRosterRaw(e.target.value)}
               placeholder="Paste staff names (one per line or comma-separated)..."
-              className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded p-3 text-xs text-[#252a2e] placeholder:text-[#7c878e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono leading-relaxed"
+              className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded p-3 text-xs text-[#252a2e] placeholder:text-[#5b6770] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono leading-relaxed"
             />
-            <p className="text-[11px] text-[#7c878e] mt-1">
+            <p className="text-[11px] text-[#5b6770] mt-1">
               Reps can also claim shifts and add themselves anytime using the public link.
             </p>
           </div>
@@ -438,7 +438,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
             <span>Generate Event Schedule</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-          <div className="flex items-center justify-center space-x-2 text-xs text-[#7c878e] mt-3 text-center">
+          <div className="flex items-center justify-center space-x-2 text-xs text-[#5b6770] mt-3 text-center">
             <Shield className="w-3.5 h-3.5 text-[#00823b]" />
             <span>Instant provisioning &bull; Staff join via your shared link, no account needed</span>
           </div>

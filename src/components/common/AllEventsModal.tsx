@@ -122,14 +122,14 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="all-events-modal-title"
-        className="bg-white border border-[#d8dce0] rounded max-w-2xl w-full max-h-[85vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
+        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-2xl w-full max-h-[85vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
       >
         {/* Modal Header */}
         <div className="p-5 border-b border-[#d8dce0] bg-[#f8f9fa]">
@@ -160,7 +160,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer shrink-0"
+                className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer shrink-0"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -170,7 +170,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
 
           {/* Search Bar */}
           <div className="mt-4 relative">
-            <Search className="w-3.5 h-3.5 text-[#7c878e] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#5b6770] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
@@ -184,7 +184,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
         {/* Modal List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
           {isLoading ? (
-            <div className="py-14 flex flex-col items-center justify-center text-xs text-[#7c878e] space-y-2">
+            <div className="py-14 flex flex-col items-center justify-center text-xs text-[#5b6770] space-y-2">
               <Loader2 className="w-6 h-6 animate-spin text-[#0063a3]" />
               <span className="font-medium">Loading events from database...</span>
             </div>
@@ -202,7 +202,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
               </button>
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div className="py-12 text-center text-xs text-[#7c878e] space-y-3">
+            <div className="py-12 text-center text-xs text-[#5b6770] space-y-3">
               <p>{searchQuery ? 'No events matched your search filter.' : 'No events found.'}</p>
               <button
                 type="button"
@@ -226,7 +226,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
                       {evt.staffCapacityPerSlot} staff/shift
                     </span>
                   </div>
-                  <div className="text-[11px] text-[#7c878e] flex items-center gap-3 mt-1 flex-wrap">
+                  <div className="text-[11px] text-[#5b6770] flex items-center gap-3 mt-1 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3 text-[#0063a3]" />
                       <span>
@@ -235,7 +235,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
                     </span>
                     {evt.location && (
                       <span className="flex items-center gap-1 truncate max-w-xs">
-                        <MapPin className="w-3 h-3 text-[#7c878e]" />
+                        <MapPin className="w-3 h-3 text-[#5b6770]" />
                         <span className="truncate">{evt.location}</span>
                       </span>
                     )}
@@ -284,7 +284,7 @@ export const AllEventsModal: React.FC<AllEventsModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 border-t border-[#d8dce0] bg-[#f8f9fa] text-[11px] text-[#7c878e] flex items-center justify-between">
+        <div className="p-3.5 border-t border-[#d8dce0] bg-[#f8f9fa] text-[11px] text-[#5b6770] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <ExternalLink className="w-3 h-3 shrink-0 text-[#0063a3]" />
             <span>Staff claim shifts via their public link without signing in.</span>

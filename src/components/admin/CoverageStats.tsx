@@ -103,7 +103,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
                   setEditLocation(config.location);
                   setIsEditingDetails(true);
                 }}
-                className="focus-ring p-1 text-[#7c878e] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer shrink-0"
+                className="focus-ring p-1 text-[#5b6770] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer shrink-0"
                 title="Edit event name and location"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -118,7 +118,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
                 value={editLocation}
                 onChange={(e) => setEditLocation(e.target.value)}
                 placeholder="Location & booth details"
-                className="text-xs text-[#252a2e] bg-white border border-[#0063a3] rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 w-full max-w-sm placeholder:text-[#7c878e]"
+                className="text-xs text-[#252a2e] bg-white border border-[#0063a3] rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 w-full max-w-sm placeholder:text-[#5b6770]"
               />
               <button
                 type="button"
@@ -252,7 +252,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             <div className={cn('text-sm font-semibold mt-0.5', isOptimal ? 'text-[#00823b]' : 'text-[#8a5800]')}>
               {isOptimal ? 'Target Achieved (>= 90%)' : 'Needs Coverage (< 90%)'}
             </div>
-            <p className="text-[11px] text-[#7c878e] mt-1">
+            <p className="text-[11px] text-[#5b6770] mt-1">
               {metrics.understaffedSlotCount > 0
                 ? `${metrics.understaffedSlotCount} slots need staffing`
                 : 'All slots fully staffed!'}
@@ -264,14 +264,14 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
         <div className="bg-[#f8f9fa] border border-[#d8dce0] rounded p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-[#46535e] text-xs font-semibold uppercase tracking-wider">
             <span>Staff Hours</span>
-            <Clock className="w-3.5 h-3.5 text-[#7c878e]" />
+            <Clock className="w-3.5 h-3.5 text-[#5b6770]" />
           </div>
           <div className="my-2">
             <div className="flex items-baseline space-x-1.5 font-mono">
               <span className="text-2xl font-bold text-[#252a2e]">
                 {metrics.totalBookedHours}
               </span>
-              <span className="text-xs text-[#7c878e] font-sans">
+              <span className="text-xs text-[#5b6770] font-sans">
                 / {metrics.totalCapacityHours} hrs req.
               </span>
             </div>
@@ -286,7 +286,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
               />
             </div>
           </div>
-          <div className="text-[11px] text-[#7c878e]">
+          <div className="text-[11px] text-[#5b6770]">
             {Math.max(0, Math.round((metrics.totalCapacityHours - metrics.totalBookedHours) * 10) / 10)} hours remaining
           </div>
         </div>
@@ -316,7 +316,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
               )}>
                 {zeroHoursCount}
               </span>
-              <span className="text-xs text-[#7c878e] font-sans">
+              <span className="text-xs text-[#5b6770] font-sans">
                 of {roster.length} members with 0 hrs
               </span>
             </div>
@@ -339,7 +339,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
         <div className="bg-[#f8f9fa] border border-[#d8dce0] rounded p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-[#46535e] text-xs font-semibold uppercase tracking-wider">
             <span>Roster &amp; Capacity</span>
-            <Users className="w-3.5 h-3.5 text-[#7c878e]" />
+            <Users className="w-3.5 h-3.5 text-[#5b6770]" />
           </div>
           <div className="my-1 space-y-1">
             <div className="flex items-center justify-between text-xs">
@@ -403,7 +403,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
               )}
             </div>
           </div>
-          <div className="text-[11px] text-[#7c878e]">
+          <div className="text-[11px] text-[#5b6770]">
             Target: ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)}h per rep &bull; calculated from roster &amp; slots
           </div>
         </div>

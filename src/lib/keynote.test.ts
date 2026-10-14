@@ -6,6 +6,8 @@ import {
   reorderKeynoteSegments,
   recalculateSegmentTimes,
   generateKeynoteMarkdown,
+  generateKeynoteHtml,
+  deleteKeynoteSession,
 } from './keynote';
 import type { KeyStakeholder, KeynoteSession } from '@/types';
 
@@ -194,5 +196,66 @@ describe('keynote helper', () => {
 
     // Verify Row Content
     expect(markdown).toContain('| 09:00 - 09:10 | 10 min | Elena Rostova | Keynote Introduction | Opening video bumper into walk-on | [Slides](https://docs.google.com/presentation/d/sample-keynote#slide=1) | Dim hall lights, mic check |');
+  });
+
+  it('generates rich HTML document formatted for Google Docs pasting', () => {
+    const eventId = 'evt_test_html';
+    const session = createKeynoteSession(eventId, {
+      title: 'Google Docs Presentation Run of Show',
+      date: '2026-11-05',
+      startTime: '09:00',
+      endTime: '10:00',
+      stageOrRoom: 'Mainstage Hall',
+      slideDeckUrl: 'https://docs.google.com/presentation/d/docs-deck',
+    });
+
+    session.segments = [
+      {
+        id: 'seg_1',
+        order: 1,
+        time: '09:00 - 09:15',
+        durationMinutes: 15,
+        topic: 'Executive Opening',
+        speakerIds: [],
+        speakerNames: 'Craig Trickett',
+        handoverNotes: 'Stage Left walk-on',
+        cueNotes: 'Center spotlight',
+      },
+    ];
+
+    const html = generateKeynoteMarkdown(session);
+    expect(html).toBeDefined();
+
+    const docHtml = generateKeynoteHtml(session);
+    expect(docHtml).toContain('<table');
+    expect(docHtml).toContain('Google Docs Presentation Run of Show');
+    expect(docHtml).toContain('Executive Opening');
+    expect(docHtml).toContain('Craig Trickett');
+    expect(docHtml).toContain('Center spotlight');
+  });
+
+  it('deletes keynote session from storage', () => {
+    const eventId = 'evt_test_del';
+    const s1 = createKeynoteSession(eventId, {
+      title: 'Session 1',
+      date: '2026-11-05',
+      startTime: '09:00',
+      endTime: '10:00',
+      stageOrRoom: 'Room A',
+    });
+    const s2 = createKeynoteSession(eventId, {
+      title: 'Session 2',
+      date: '2026-11-05',
+      startTime: '10:30',
+      endTime: '11:30',
+      stageOrRoom: 'Room B',
+    });
+
+    const deleted = deleteKeynoteSession(eventId, s1.id);
+    expect(deleted).toBe(true);
+
+    const remaining = getKeynoteSessions(eventId);
+    expect(remaining.some((s) => s.id === s1.id)).toBe(false);
+    expect(remaining.some((s) => s.id === s2.id)).toBe(true);
   });
 });

@@ -78,7 +78,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-[#252a2e]/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="absolute inset-0 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim"
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
@@ -87,7 +87,8 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
           tabIndex={-1}
           role="dialog"
           aria-modal="true"
-          className="w-screen max-w-md bg-white border-l border-[#d8dce0] shadow-modus-4 flex flex-col animate-in slide-in-from-right duration-200 focus:outline-hidden"
+          aria-labelledby="zero-hours-title"
+          className="w-screen max-w-md bg-white border-l border-[#d8dce0] shadow-modus-4 flex flex-col drawer-panel focus:outline-hidden"
         >
           {/* Header */}
           <div className="p-5 border-b border-[#d8dce0] flex items-start justify-between bg-[#f8f9fa]">
@@ -100,7 +101,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                   Accountability Drawer
                 </span>
               </div>
-              <h2 className="text-lg font-bold text-[#252a2e] tracking-tight">
+              <h2 id="zero-hours-title" className="text-lg font-bold text-[#252a2e] tracking-tight">
                 Zero-Hours Team Members
               </h2>
               <p className="text-xs text-[#46535e]">
@@ -111,7 +112,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#e7eaef] transition-colors"
+              className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] rounded hover:bg-[#e7eaef] transition-colors"
               aria-label="Close drawer"
             >
               <X className="w-5 h-5" />
@@ -200,7 +201,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                       </span>
                     </div>
                     {member.email && (
-                      <div className="text-[11px] text-[#7c878e] font-mono truncate mt-0.5">
+                      <div className="text-[11px] text-[#5b6770] font-mono truncate mt-0.5">
                         {member.email}
                       </div>
                     )}

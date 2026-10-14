@@ -107,7 +107,7 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
         </div>
         <div className="min-w-0">
           <div className="text-xs font-bold text-[#252a2e]">Google Calendar Invites</div>
-          <p className="text-[11px] text-[#7c878e]">
+          <p className="text-[11px] text-[#5b6770]">
             {config.googleCalendarConnected
               ? 'Connected — staff are automatically invited when they claim a shift.'
               : 'Connect your Google Calendar to automatically invite staff when they claim a shift.'}

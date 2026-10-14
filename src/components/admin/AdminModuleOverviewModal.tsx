@@ -92,14 +92,14 @@ export const AdminModuleOverviewModal: React.FC<AdminModuleOverviewModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="module-modal-title"
-        className="bg-white border border-[#d8dce0] rounded max-w-2xl w-full max-h-[88vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
+        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-2xl w-full max-h-[88vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
       >
         {/* Modal Header */}
         <div className="flex items-start justify-between p-5 border-b border-[#d8dce0] bg-white">
@@ -115,7 +115,7 @@ export const AdminModuleOverviewModal: React.FC<AdminModuleOverviewModalProps> =
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-[#fef3eb] text-[#d97316] border border-[#fbd38d]">
                   {module.badgeText || 'Planned Feature'}
                 </span>
-                <span className="text-[11px] font-medium text-[#7c878e] px-2 py-0.5 rounded bg-[#f1f3f6]">
+                <span className="text-[11px] font-medium text-[#5b6770] px-2 py-0.5 rounded bg-[#f1f3f6]">
                   {module.category}
                 </span>
               </div>
@@ -138,7 +138,7 @@ export const AdminModuleOverviewModal: React.FC<AdminModuleOverviewModalProps> =
             <button
               type="button"
               onClick={onClose}
-              className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] hover:bg-[#f1f3f6] rounded transition-colors cursor-pointer"
+              className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] hover:bg-[#f1f3f6] rounded transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -179,7 +179,7 @@ export const AdminModuleOverviewModal: React.FC<AdminModuleOverviewModalProps> =
 
           {/* Development Roadmap */}
           <div className="border-t border-[#e5e9ec] pt-5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#7c878e] mb-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#5b6770] mb-2.5">
               Roadmap & Milestones
             </h4>
             <div className="space-y-2">

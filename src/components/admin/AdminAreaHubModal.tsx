@@ -125,14 +125,14 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="hub-modal-title"
-        className="bg-white border border-[#d8dce0] rounded max-w-4xl w-full max-h-[90vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
+        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-4xl w-full max-h-[90vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
       >
         {/* Modal Header */}
         <div className="p-5 border-b border-[#d8dce0] bg-[#f8f9fa]">
@@ -151,13 +151,13 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0063a3]">
                     Event Administration Hub
                   </span>
-                  <span className="text-[#7c878e]">&bull;</span>
+                  <span className="text-[#5b6770]">&bull;</span>
                   <span className="text-xs text-[#46535e]">Select an area to work on</span>
                 </div>
                 <h2 id="hub-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5">
                   {event.title}
                 </h2>
-                <div className="flex items-center gap-3 text-xs text-[#7c878e] mt-1 flex-wrap">
+                <div className="flex items-center gap-3 text-xs text-[#5b6770] mt-1 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>
@@ -177,7 +177,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="focus-ring p-1.5 text-[#7c878e] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer shrink-0"
+              className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer shrink-0"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -188,7 +188,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
           <div className="mt-4 pt-3 border-t border-[#e5e9ec] flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             {/* Search Input */}
             <div className="relative flex-1 max-w-xs">
-              <Search className="w-3.5 h-3.5 text-[#7c878e] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#5b6770] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
@@ -200,7 +200,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#7c878e] hover:text-[#252a2e]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#5b6770] hover:text-[#252a2e]"
                 >
                   &times;
                 </button>
@@ -209,7 +209,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
 
             {/* View Mode & Order Controls */}
             <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-              <span className="text-[11px] font-semibold text-[#7c878e] flex items-center gap-1">
+              <span className="text-[11px] font-semibold text-[#5b6770] flex items-center gap-1">
                 <ArrowUpDown className="w-3 h-3" />
                 <span>Order:</span>
               </span>
@@ -247,7 +247,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
 
         {/* Modules Grid */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <div className="flex items-center justify-between text-xs text-[#7c878e]">
+          <div className="flex items-center justify-between text-xs text-[#5b6770]">
             <span>
               Showing <span className="font-semibold text-[#252a2e]">{filteredAndSortedModules.length}</span>{' '}
               event management areas
@@ -292,7 +292,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
                           <span>Active</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-[#7c878e] bg-[#f1f3f6] border border-[#e5e9ec]">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-[#5b6770] bg-[#f1f3f6] border border-[#e5e9ec]">
                           {module.badgeText || 'Coming Soon'}
                         </span>
                       )}
@@ -314,7 +314,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
 
                   {/* Footer of Card */}
                   <div className="mt-3.5 pt-2.5 border-t border-[#e5e9ec] flex items-center justify-between text-[11px] font-semibold">
-                    <span className="text-[#7c878e] font-normal">{module.category}</span>
+                    <span className="text-[#5b6770] font-normal">{module.category}</span>
                     <span
                       className={`flex items-center gap-0.5 transition-transform group-hover:translate-x-0.5 ${
                         isActive ? 'text-[#0063a3] font-bold' : 'text-[#46535e] group-hover:text-[#0063a3]'
@@ -330,7 +330,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
           </div>
 
           {filteredAndSortedModules.length === 0 && (
-            <div className="text-center py-12 text-xs text-[#7c878e]">
+            <div className="text-center py-12 text-xs text-[#5b6770]">
               No event areas matched your search. Try another query or clear filters.
             </div>
           )}
@@ -347,7 +347,7 @@ export const AdminAreaHubModal: React.FC<AdminAreaHubModalProps> = ({
             <span>Back to Events</span>
           </button>
 
-          <span className="text-[11px] text-[#7c878e] hidden sm:inline">
+          <span className="text-[11px] text-[#5b6770] hidden sm:inline">
             Expo Staffing Hub &bull; Trimble Modus Design
           </span>
 

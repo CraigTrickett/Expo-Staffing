@@ -121,7 +121,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#7c878e] absolute left-2.5 top-1/2 transform -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#5b6770] absolute left-2.5 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search staff..."
@@ -188,7 +188,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
             placeholder="Full Name (e.g. Maya Lin)"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#7c878e]"
+            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#5b6770]"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -198,7 +198,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
             placeholder="Email (optional, e.g. maya@company.com)"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
-            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#7c878e]"
+            className="w-full bg-white border border-[#d8dce0] text-xs text-[#252a2e] px-3 py-2 rounded focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 focus:border-[#0063a3] placeholder:text-[#5b6770]"
           />
         </div>
         <button
@@ -226,7 +226,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
           <tbody className="divide-y divide-[#d8dce0]">
             {filteredRoster.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[#7c878e]">
+                <td colSpan={5} className="py-8 text-center text-[#5b6770]">
                   No roster members match current filter.
                 </td>
               </tr>
@@ -292,7 +292,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
                           placeholder="Optional"
-                          className="w-full bg-white border border-[#0063a3] rounded px-2 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 placeholder:text-[#7c878e]"
+                          className="w-full bg-white border border-[#0063a3] rounded px-2 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 placeholder:text-[#5b6770]"
                         />
                       ) : (
                         member.email
@@ -314,7 +314,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                         >
                           {member.totalBookedHours}h
                         </span>
-                        <span className="text-[#7c878e] text-[11px]">
+                        <span className="text-[#5b6770] text-[11px]">
                           / {targetHours}h
                         </span>
                       </div>
@@ -394,7 +394,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                             <button
                               type="button"
                               onClick={() => startEditing(member)}
-                              className="p-1.5 text-[#7c878e] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer"
+                              className="p-1.5 text-[#5b6770] hover:text-[#0063a3] hover:bg-[#e5f2f8] rounded transition-colors cursor-pointer"
                               title={`Edit ${member.name}'s details`}
                             >
                               <Pencil className="w-4 h-4" />
@@ -403,7 +403,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(member.id)}
-                            className="p-1.5 text-[#7c878e] hover:text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors cursor-pointer"
+                            className="p-1.5 text-[#5b6770] hover:text-[#da3832] hover:bg-[#fdf2f2] rounded transition-colors cursor-pointer"
                             title={`Remove ${member.name} from roster`}
                           >
                             <Trash2 className="w-4 h-4" />

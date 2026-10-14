@@ -53,13 +53,14 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
       <div
         ref={modalRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className="bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 animate-in zoom-in-95 duration-150 focus:outline-hidden"
+        aria-labelledby="share-modal-title"
+        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-lg w-full p-6 space-y-5 shadow-modus-4 focus:outline-hidden"
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-[#d8dce0] pb-4">
@@ -72,7 +73,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
                 Event Access & Sharing
               </span>
             </div>
-            <h3 className="text-xl font-bold text-[#252a2e] tracking-tight">
+            <h3 id="share-modal-title" className="text-xl font-bold text-[#252a2e] tracking-tight">
               Share &ldquo;{config.title}&rdquo;
             </h3>
             <p className="text-xs text-[#46535e]">
@@ -83,7 +84,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
+            className="p-1.5 text-[#5b6770] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6] transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -152,7 +153,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
 
           {/* QR Code visual box */}
           {showQrCode && (
-            <div className="mt-3 p-4 bg-white rounded border border-[#d8dce0] flex flex-col items-center justify-center text-center space-y-2 text-[#252a2e] animate-in fade-in zoom-in-95 duration-150">
+            <div className="mt-3 p-4 bg-white rounded border border-[#d8dce0] flex flex-col items-center justify-center text-center space-y-2 text-[#252a2e] animate-[rise-in_220ms_cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none">
               {/* Scalable Vector QR representation */}
               <div className="p-2 bg-white rounded border border-[#d8dce0] shadow-xs">
                 <svg

@@ -287,13 +287,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
 
       {/* Admin Slot Quick-Assign & Capacity Modal */}
       {activeSlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
           <div
             ref={assignModalRef}
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            className="bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-3 focus:outline-hidden"
+            aria-labelledby="slot-modal-title"
+            className="modal-panel bg-white border border-[#d8dce0] rounded max-w-md w-full p-5 space-y-4 shadow-modus-3 focus:outline-hidden"
           >
             {/* Header */}
             <div className="flex items-start justify-between border-b border-[#d8dce0] pb-3">
@@ -301,15 +302,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
                 <span className="text-[11px] font-bold text-[#0063a3] uppercase tracking-wider">
                   Shift Slot Inspection
                 </span>
-                <h3 className="text-base font-bold text-[#252a2e]">
+                <h3 id="slot-modal-title" className="text-base font-bold text-[#252a2e]">
                   {formatTime12h(activeSlot.startTime)} &ndash; {formatTime12h(activeSlot.endTime)}
                 </h3>
-                <p className="text-xs text-[#7c878e]">{activeSlot.date}</p>
+                <p className="text-xs text-[#5b6770]">{activeSlot.date}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedSlotForAssign(null)}
-                className="focus-ring p-1 text-[#7c878e] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6]"
+                className="focus-ring p-1 text-[#5b6770] hover:text-[#252a2e] rounded hover:bg-[#f1f3f6]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -319,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
             <div className="flex items-center justify-between bg-[#f8f9fa] p-3 rounded border border-[#d8dce0]">
               <div>
                 <div className="text-xs font-semibold text-[#252a2e]">Staff Capacity</div>
-                <div className="text-[11px] text-[#7c878e]">Target staffing level for this specific shift</div>
+                <div className="text-[11px] text-[#5b6770]">Target staffing level for this specific shift</div>
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -353,7 +354,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
                 )}
               </div>
               {activeSlot.bookings.length === 0 ? (
-                <div className="p-3 bg-[#f8f9fa] rounded border border-dashed border-[#d8dce0] text-center text-xs text-[#7c878e]">
+                <div className="p-3 bg-[#f8f9fa] rounded border border-dashed border-[#d8dce0] text-center text-xs text-[#5b6770]">
                   No staff members assigned to this shift yet.
                 </div>
               ) : (
@@ -369,7 +370,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-[#252a2e]">{booking.staffName}</div>
-                          <div className="text-[10px] text-[#7c878e] font-mono">{booking.staffEmail}</div>
+                          <div className="text-[10px] text-[#5b6770] font-mono">{booking.staffEmail}</div>
                         </div>
                       </div>
                       <button
@@ -405,7 +406,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
                           <div className="text-xs font-semibold text-[#252a2e] group-hover:text-[#0063a3]">
                             {member.name}
                           </div>
-                          <div className="text-[10px] text-[#7c878e]">
+                          <div className="text-[10px] text-[#5b6770]">
                             {member.totalBookedHours}h booked / ~{roundTargetHoursForDisplay(metrics.dynamicTargetHours)}h target
                           </div>
                         </div>

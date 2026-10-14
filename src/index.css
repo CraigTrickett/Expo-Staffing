@@ -87,3 +87,63 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #7c878e;
 }
+
+/* ------------------------------------------------------------------ */
+/* Dialog motion                                                       */
+/* One authored moment: the scrim fades and blurs in, the panel rises  */
+/* into place. Every keyframe has only a `from`, so the resting state  */
+/* is the element's own styling and nothing hides if animation is off. */
+/* ------------------------------------------------------------------ */
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes row-flash {
+  from {
+    background-color: #cfe7f3;
+  }
+}
+
+@layer utilities {
+  .modal-scrim {
+    animation: scrim-in 220ms ease-out;
+  }
+  .modal-panel {
+    animation: panel-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .drawer-panel {
+    animation: drawer-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-scrim,
+  .modal-panel,
+  .drawer-panel {
+    animation: none;
+  }
+}
