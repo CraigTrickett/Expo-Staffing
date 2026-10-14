@@ -23,7 +23,7 @@ import {
   sendPasswordResetEmail,
   type Auth,
 } from 'firebase/auth';
-import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember } from '@/types';
+import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember, KeyStakeholder, KeynoteSession } from '@/types';
 import { parseTimeToMinutes, updateSlotDerivedState } from './matrix';
 
 const COLLECTION = 'boothEvents';
@@ -317,11 +317,19 @@ interface BoothEventDoc {
   config: EventConfig;
   slots: TimeSlot[];
   roster: StaffMember[];
+  stakeholders?: KeyStakeholder[];
+  keynoteSessions?: KeynoteSession[];
   updatedAt: string;
 }
 
 function docToStoredEvent(data: BoothEventDoc): StoredEventData {
-  return { config: data.config, slots: data.slots, roster: data.roster };
+  return {
+    config: data.config,
+    slots: data.slots,
+    roster: data.roster,
+    stakeholders: data.stakeholders || [],
+    keynoteSessions: data.keynoteSessions || [],
+  };
 }
 
 /**
@@ -399,6 +407,8 @@ export async function pushEventToFirebase(eventData: StoredEventData): Promise<b
       config: eventData.config,
       slots: eventData.slots,
       roster: eventData.roster,
+      stakeholders: eventData.stakeholders || [],
+      keynoteSessions: eventData.keynoteSessions || [],
       updatedAt: new Date().toISOString(),
     });
     reportConnectivity(true);

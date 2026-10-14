@@ -7,6 +7,8 @@ import {
   Shield,
   Users,
   Download,
+  History,
+  Menu as MenuIcon,
 } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { downloadIcs, generateIcsFile } from '@/lib/calendar';
@@ -18,9 +20,18 @@ interface LayoutProps {
   headerSlot?: React.ReactNode;
   currentRoute: string;
   isAdminAuthenticated?: boolean;
+  onOpenAllEvents?: () => void;
+  onOpenMenu?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRoute, isAdminAuthenticated }) => {
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  headerSlot,
+  currentRoute,
+  isAdminAuthenticated,
+  onOpenAllEvents,
+  onOpenMenu,
+}) => {
   const { currentEvent: config, slots, resetToDemo } = useEventStore();
   const [connectivity, setConnectivity] = useState<ConnectivityStatus>('unknown');
 
@@ -97,17 +108,29 @@ export const Layout: React.FC<LayoutProps> = ({ children, headerSlot, currentRou
 
           {/* Quick Context Navigation */}
           <div className="flex items-center space-x-1.5 sm:space-x-2">
-            <a
-              href="#/"
-              className={`focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer ${
-                currentRoute === 'wizard'
-                  ? 'bg-white text-[#004f83] shadow-xs'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Event</span>
-            </a>
+            {onOpenAllEvents && (
+              <button
+                type="button"
+                onClick={onOpenAllEvents}
+                className="focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer text-white/90 hover:text-white hover:bg-white/10"
+                title="Select or switch events"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Events</span>
+              </button>
+            )}
+
+            {onOpenMenu && (
+              <button
+                type="button"
+                onClick={onOpenMenu}
+                className="focus-ring-invert px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer bg-white/15 hover:bg-white/25 text-white shadow-2xs"
+                title="Open Event Administration Hub"
+              >
+                <MenuIcon className="w-3.5 h-3.5" />
+                <span>Menu</span>
+              </button>
+            )}
 
             {config && (
               <>

@@ -87,8 +87,88 @@ export interface WizardPayload {
   rosterNames?: string[];
 }
 
+export interface KeyStakeholder {
+  id: string;
+  eventId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  team: string;
+  involvedWith: string[];
+  phone?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export type KeynoteStage = 'develop_run_of_show' | 'slide_deck_prep' | 'signed_off';
+
+export interface Stage1NarrativeConfig {
+  confirmedNarrative: boolean;
+  themeStatement: string;
+  coreMessage: string;
+  flowHandoverNotes: string;
+  hasConnectingGraphics: boolean;
+  customerInvolvementNotes: string;
+  customerCompanies: string[];
+}
+
+export interface WeeklyMeetingConfig {
+  enabled: boolean;
+  dayOfWeek: string;
+  time: string;
+  meetingUrl?: string;
+  notes?: string;
+}
+
+export interface RehearsalItem {
+  id: string;
+  title: string;
+  targetDate: string;
+  time: string;
+  locationOrUrl: string;
+  isCompleted: boolean;
+  notes?: string;
+}
+
+export interface RunOfShowSegment {
+  id: string;
+  order: number;
+  time: string;
+  durationMinutes: number;
+  topic: string;
+  speakerIds: string[];
+  speakerNames: string;
+  handoverNotes?: string;
+  slideDeckLink?: string;
+  cueNotes?: string;
+}
+
+export interface KeynoteSession {
+  id: string;
+  eventId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  stageOrRoom: string;
+  currentStage: KeynoteStage;
+  slideDeckUrl?: string;
+  assignedSpeakerIds: string[];
+  stage1Narrative: Stage1NarrativeConfig;
+  weeklyMeeting: WeeklyMeetingConfig;
+  rehearsals: RehearsalItem[];
+  segments: RunOfShowSegment[];
+  signedOffBy?: string;
+  signedOffAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredEventData {
   config: EventConfig;
   slots: TimeSlot[];
   roster: StaffMember[];
+  stakeholders?: KeyStakeholder[];
+  keynoteSessions?: KeynoteSession[];
 }
+

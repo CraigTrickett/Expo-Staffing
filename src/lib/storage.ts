@@ -1,12 +1,8 @@
-import type { EventConfig, StaffMember, TimeSlot } from '@/types';
+import type { EventConfig, StaffMember, TimeSlot, KeyStakeholder, KeynoteSession, StoredEventData } from '@/types';
 import { generateDeterministicSlots, updateSlotDerivedState } from './matrix';
 import { generateNanoKey } from './utils';
 
-export interface StoredEventData {
-  config: EventConfig;
-  slots: TimeSlot[];
-  roster: StaffMember[];
-}
+export type { StoredEventData };
 
 const STORAGE_KEY = 'boothduty_events_v1';
 const IDENTITY_STORAGE_PREFIX = 'boothduty_identity_';
