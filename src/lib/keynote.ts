@@ -1,3 +1,7 @@
+import { buildRunOfShowDoc, EMPTY_DOCUMENT_SETTINGS, escapeHtml, renderRunOfShowHtml, renderRunOfShowMarkdown } from './runOfShowDoc';
+import type { RunOfShowDocOptions } from './runOfShowDoc';
+import type { KeynoteDocumentSettings } from '@/types/keynoteDocument';
+import type { Task } from '@/types/tasks';
 import type {
   KeynoteSession,
   KeynoteStage,
@@ -9,43 +13,125 @@ import type {
 } from '@/types';
 import { generateNanoKey } from './utils';
 import { storage } from './storage';
+import { readModuleLocal, saveModule, seedModuleLocal } from './moduleStore';
 
-const KEYNOTE_STORAGE_PREFIX = 'boothduty_keynotes_';
+/** Where earlier versions kept keynote sessions: this device only. Read once, to move them to shared storage. */
+const LEGACY_KEYNOTE_PREFIX = 'boothduty_keynotes_';
+export const KEYNOTE_MODULE_ID = 'keynote';
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const text = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback);
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const STAGES: KeynoteStage[] = ['develop_run_of_show', 'slide_deck_prep', 'signed_off'];
+
+function normaliseSegment(raw: unknown, index: number): RunOfShowSegment | null {
+  if (!isRecord(raw)) return null;
+  const duration = typeof raw.durationMinutes === 'number' && Number.isFinite(raw.durationMinutes) ? Math.max(0, raw.durationMinutes) : 10;
+  return {
+    ...(raw as object),
+    id: text(raw.id) || `seg_${index}`,
+    order: typeof raw.order === 'number' && Number.isFinite(raw.order) ? raw.order : index + 1,
+    time: text(raw.time),
+    durationMinutes: duration,
+    topic: text(raw.topic),
+    speakerIds: list(raw.speakerIds).filter((x): x is string => typeof x === 'string'),
+    speakerNames: text(raw.speakerNames),
+  } as RunOfShowSegment;
+}
+
+/**
+ * One keynote session read from storage, with anything missing or the wrong shape filled in, or null
+ * if it is not a session at all. Stored data can come from an older version or a partial write, and a
+ * screen should never fall over because of it.
+ */
+export function normaliseKeynoteSession(raw: unknown): KeynoteSession | null {
+  if (!isRecord(raw) || typeof raw.id !== 'string' || !raw.id) return null;
+  const narrative = isRecord(raw.stage1Narrative) ? raw.stage1Narrative : {};
+  const meeting = isRecord(raw.weeklyMeeting) ? raw.weeklyMeeting : {};
+  return {
+    ...(raw as object),
+    id: raw.id,
+    eventId: text(raw.eventId),
+    title: text(raw.title, 'Untitled session'),
+    date: text(raw.date),
+    startTime: text(raw.startTime, '09:00'),
+    endTime: text(raw.endTime, '10:30'),
+    stageOrRoom: text(raw.stageOrRoom),
+    currentStage: STAGES.includes(raw.currentStage as KeynoteStage) ? (raw.currentStage as KeynoteStage) : 'develop_run_of_show',
+    assignedSpeakerIds: list(raw.assignedSpeakerIds).filter((x): x is string => typeof x === 'string'),
+    stage1Narrative: {
+      confirmedNarrative: false,
+      themeStatement: '',
+      coreMessage: '',
+      flowHandoverNotes: '',
+      hasConnectingGraphics: true,
+      customerInvolvementNotes: '',
+      ...narrative,
+      customerCompanies: list(narrative.customerCompanies).filter((x): x is string => typeof x === 'string'),
+    },
+    weeklyMeeting: { enabled: true, dayOfWeek: 'Tuesday', time: '', meetingUrl: '', notes: '', ...meeting },
+    rehearsals: list(raw.rehearsals).filter(isRecord) as unknown as KeynoteSession['rehearsals'],
+    // Positions are counted after any junk has gone, so the fallback order has no gaps.
+    segments: list(raw.segments)
+      .filter(isRecord)
+      .map((seg, i) => normaliseSegment(seg, i))
+      .filter((x): x is RunOfShowSegment => x !== null),
+    createdAt: text(raw.createdAt),
+    updatedAt: text(raw.updatedAt),
+  } as KeynoteSession;
+}
+
+export function normaliseKeynoteSessions(raw: unknown): KeynoteSession[] {
+  return list(raw)
+    .map(normaliseKeynoteSession)
+    .filter((x): x is KeynoteSession => x !== null);
+}
+
+function readLegacyKeynotes(eventId: string): KeynoteSession[] {
+  try {
+    const raw = localStorage.getItem(`${LEGACY_KEYNOTE_PREFIX}${eventId}`);
+    if (raw) {
+      const found = normaliseKeynoteSessions(JSON.parse(raw));
+      if (found.length > 0) return found;
+    }
+  } catch {
+    /* unreadable: treat as nothing to migrate */
+  }
+  return normaliseKeynoteSessions(storage.getById(eventId)?.keynoteSessions);
+}
+
+/**
+ * The event's keynote sessions. They are shared between admins and devices through the module store, so
+ * the local copy read here is the latest one that has been brought in (see syncModules). A new event
+ * starts with none.
+ */
 export function getKeynoteSessions(eventId: string): KeynoteSession[] {
   if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(`${KEYNOTE_STORAGE_PREFIX}${eventId}`);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-    const stored = storage.getById(eventId);
-    if (stored?.keynoteSessions && stored.keynoteSessions.length > 0) {
-      localStorage.setItem(`${KEYNOTE_STORAGE_PREFIX}${eventId}`, JSON.stringify(stored.keynoteSessions));
-      return stored.keynoteSessions;
-    }
+  const shared = readModuleLocal<unknown>(eventId, KEYNOTE_MODULE_ID);
+  if (shared) return normaliseKeynoteSessions(shared.data);
 
-    const initial = createDefaultKeynoteSessions(eventId, stored?.config?.startDate);
-    localStorage.setItem(`${KEYNOTE_STORAGE_PREFIX}${eventId}`, JSON.stringify(initial));
-    return initial;
-  } catch (err) {
-    console.warn('[keynote] Failed to get keynote sessions:', err);
-    return [];
+  // Earlier versions kept these on this device only. Move them across, once.
+  const legacy = readLegacyKeynotes(eventId);
+  if (legacy.length > 0) {
+    seedModuleLocal(eventId, KEYNOTE_MODULE_ID, legacy);
+    return legacy;
   }
+  return [];
+}
+
+/** Adds the sample sessions to an event that has none, and returns the sessions it now has. */
+export function addSampleKeynoteSessions(eventId: string): KeynoteSession[] {
+  const current = getKeynoteSessions(eventId);
+  if (current.length > 0) return current;
+  const sample = createSampleKeynoteSessions(eventId, storage.getById(eventId)?.config?.startDate);
+  saveKeynoteSessions(eventId, sample);
+  return sample;
 }
 
 export function saveKeynoteSessions(eventId: string, sessions: KeynoteSession[]): void {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`${KEYNOTE_STORAGE_PREFIX}${eventId}`, JSON.stringify(sessions));
-    const stored = storage.getById(eventId);
-    if (stored) {
-      stored.keynoteSessions = sessions;
-      storage.saveEvent(stored);
-    }
-  } catch (err) {
-    console.warn('[keynote] Failed to save keynote sessions:', err);
-  }
+  // The working copy is written at once, and the shared copy follows in the background.
+  void saveModule(eventId, KEYNOTE_MODULE_ID, sessions);
 }
 
 export function createKeynoteSession(
@@ -56,6 +142,7 @@ export function createKeynoteSession(
     startTime: string;
     endTime: string;
     stageOrRoom: string;
+    spaceId?: string;
     slideDeckUrl?: string;
   }
 ): KeynoteSession {
@@ -68,6 +155,7 @@ export function createKeynoteSession(
     startTime: params.startTime || '09:00',
     endTime: params.endTime || '10:30',
     stageOrRoom: params.stageOrRoom.trim() || 'Mainstage Hall A',
+    spaceId: params.spaceId,
     currentStage: 'develop_run_of_show',
     slideDeckUrl: params.slideDeckUrl?.trim(),
     assignedSpeakerIds: [],
@@ -312,82 +400,6 @@ function normaliseName(name: string): string {
   return name.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-export function generateKeynoteMarkdown(
-  session: KeynoteSession,
-  stakeholders: KeyStakeholder[] = []
-): string {
-  const speakerNameMap = new Map<string, string>();
-  stakeholders.forEach((s) => {
-    speakerNameMap.set(s.id, `${s.firstName} ${s.lastName}`.trim());
-  });
-
-  const lines: string[] = [];
-  lines.push(`# ${session.title}`);
-  lines.push(`- **Date & Time:** ${session.date || 'TBD'} | ${session.startTime} – ${session.endTime}`);
-  lines.push(`- **Stage / Room:** ${session.stageOrRoom || 'Mainstage'}`);
-  lines.push(`- **Production Stage:** ${formatStageLabel(session.currentStage)}`);
-
-  if (session.slideDeckUrl) {
-    lines.push(`- **Slide Deck Master:** [${session.slideDeckUrl}](${session.slideDeckUrl})`);
-  } else {
-    lines.push(`- **Slide Deck Master:** *Pending Stage 2 Preparation*`);
-  }
-
-  if (session.stage1Narrative.themeStatement) {
-    lines.push(`- **Narrative Theme:** ${session.stage1Narrative.themeStatement}`);
-  }
-  if (session.stage1Narrative.coreMessage) {
-    lines.push(`- **Core Message:** ${session.stage1Narrative.coreMessage}`);
-  }
-  if (session.stage1Narrative.flowHandoverNotes) {
-    lines.push(`- **Flow & Connecting Graphics:** ${session.stage1Narrative.flowHandoverNotes}`);
-  }
-  if (session.stage1Narrative.customerInvolvementNotes) {
-    lines.push(`- **Customer / Client Involvement:** ${session.stage1Narrative.customerInvolvementNotes}`);
-  }
-
-  if (session.weeklyMeeting.enabled) {
-    lines.push(`- **Weekly Progress Sync:** ${session.weeklyMeeting.dayOfWeek} at ${session.weeklyMeeting.time} ${session.weeklyMeeting.meetingUrl ? `([Link](${session.weeklyMeeting.meetingUrl}))` : ''}`);
-  }
-
-  if (session.rehearsals.length > 0) {
-    const rehearsalSummary = session.rehearsals
-      .map((r) => `${r.title} (${r.targetDate} - ${r.isCompleted ? '✓ Done' : 'Pending'})`)
-      .join('; ');
-    lines.push(`- **Rehearsal Milestones:** ${rehearsalSummary}`);
-  }
-
-  if (session.signedOffBy) {
-    lines.push(`- **Sign-Off:** Approved by **${session.signedOffBy}** on ${session.signedOffAt || 'N/A'}`);
-  }
-
-  lines.push('## Run of Show');
-  lines.push('');
-  lines.push('| Time | Duration | Speaker(s) | Topic / Segment | Slide / Deck Link | Handover / Transition | Stage Cues & AV Notes |');
-  lines.push('| :--- | :--- | :--- | :--- | :--- | :--- | :--- |');
-
-  for (const seg of session.segments) {
-    const resolvedSpeakers =
-      seg.speakerIds && seg.speakerIds.length > 0
-        ? seg.speakerIds.map((id) => speakerNameMap.get(id) || id).join(', ')
-        : seg.speakerNames || 'TBD';
-
-    const deckLink = seg.slideDeckLink ? `[Slides](${seg.slideDeckLink})` : (session.slideDeckUrl ? `[Master Deck](${session.slideDeckUrl})` : '—');
-    const handover = seg.handoverNotes ? escapePipes(seg.handoverNotes) : '—';
-    const cues = seg.cueNotes ? escapePipes(seg.cueNotes) : '—';
-    const topic = escapePipes(seg.topic || 'Untitled Segment');
-    const speaker = escapePipes(resolvedSpeakers);
-
-    lines.push(`| ${seg.time} | ${seg.durationMinutes} min | ${speaker} | ${topic} | ${deckLink} | ${handover} | ${cues} |`);
-  }
-
-  lines.push('');
-  lines.push('---');
-  lines.push(`*Generated from Expo Staffing Production Hub on ${new Date().toLocaleDateString()}*`);
-
-  return lines.join('\n');
-}
-
 export function downloadMarkdownFile(filename: string, content: string): void {
   if (typeof window === 'undefined') return;
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -401,141 +413,60 @@ export function downloadMarkdownFile(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function escapeHtml(str: string): string {
-  return (str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+export interface RunOfShowContext {
+  eventTitle?: string;
+  settings?: KeynoteDocumentSettings;
+  /** Tasks tagged to the keynote module; the open ones are printed as "Open Items". */
+  openItems?: Task[];
+  options?: RunOfShowDocOptions;
 }
 
-export function generateKeynoteHtml(
-  session: KeynoteSession,
-  stakeholders: KeyStakeholder[] = []
-): string {
-  const speakerNameMap = new Map<string, string>();
-  stakeholders.forEach((s) => {
-    speakerNameMap.set(s.id, `${s.firstName} ${s.lastName}`.trim());
+const asList = (sessions: KeynoteSession | KeynoteSession[]) => (Array.isArray(sessions) ? sessions : [sessions]);
+
+const docFor = (sessions: KeynoteSession | KeynoteSession[], stakeholders: KeyStakeholder[], ctx: RunOfShowContext) =>
+  buildRunOfShowDoc({
+    eventTitle: ctx.eventTitle ?? '',
+    settings: ctx.settings ?? EMPTY_DOCUMENT_SETTINGS,
+    sessions: asList(sessions),
+    stakeholders,
+    openItems: ctx.openItems,
+    options: ctx.options,
   });
 
-  const rows = session.segments
-    .map((seg, idx) => {
-      const resolvedSpeakers =
-        seg.speakerIds && seg.speakerIds.length > 0
-          ? seg.speakerIds.map((id) => speakerNameMap.get(id) || id).join(', ')
-          : seg.speakerNames || 'TBD';
+/** The run of show as Markdown, in the layout of the Developer Summit document. */
+export function generateKeynoteMarkdown(
+  sessions: KeynoteSession | KeynoteSession[],
+  stakeholders: KeyStakeholder[] = [],
+  ctx: RunOfShowContext = {}
+): string {
+  return renderRunOfShowMarkdown(docFor(sessions, stakeholders, ctx));
+}
 
-      const deckLinkHtml = seg.slideDeckLink
-        ? `<a href="${escapeHtml(seg.slideDeckLink)}" style="color: #0063a3; text-decoration: underline;" target="_blank">Slide Link</a>`
-        : session.slideDeckUrl
-          ? `<a href="${escapeHtml(session.slideDeckUrl)}" style="color: #0063a3; text-decoration: underline;" target="_blank">Master Deck</a>`
-          : '—';
-
-      const bg = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
-
-      return `
-      <tr style="background-color: ${bg};">
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-family: monospace; font-weight: bold; text-align: center; font-size: 13px;">${idx + 1}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-family: monospace; font-size: 13px; font-weight: 600; white-space: nowrap;">${escapeHtml(seg.time)}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 13px; font-weight: 500; white-space: nowrap;">${seg.durationMinutes} min</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 13px; font-weight: 600; color: #252a2e;">${escapeHtml(resolvedSpeakers)}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 13px; color: #252a2e;">${escapeHtml(seg.topic || 'Untitled Segment')}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 12px; color: #0063a3;">${deckLinkHtml}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 12px; color: #46535e;">${escapeHtml(seg.handoverNotes || '—')}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d8dce0; font-size: 12px; color: #46535e;">${escapeHtml(seg.cueNotes || '—')}</td>
-      </tr>`;
-    })
-    .join('');
-
-  return `
-    <div style="font-family: Arial, Helvetica, sans-serif; color: #252a2e; line-height: 1.5; max-width: 900px; margin: 0 auto; padding: 20px;">
-      <h1 style="color: #004f83; font-size: 24px; margin-bottom: 6px; border-bottom: 2px solid #004f83; padding-bottom: 8px;">${escapeHtml(session.title)}</h1>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; width: 140px; color: #46535e;">Date & Time:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.date || 'TBD')} &bull; ${escapeHtml(session.startTime)} – ${escapeHtml(session.endTime)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Location / Stage:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.stageOrRoom || 'Mainstage')}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Production Stage:</td>
-          <td style="padding: 4px 8px; font-weight: 600; color: #0063a3;">${formatStageLabel(session.currentStage)}</td>
-        </tr>
-        ${session.slideDeckUrl ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Master Slide Deck:</td>
-          <td style="padding: 4px 8px;"><a href="${escapeHtml(session.slideDeckUrl)}" style="color: #0063a3;" target="_blank">${escapeHtml(session.slideDeckUrl)}</a></td>
-        </tr>` : ''}
-        ${session.stage1Narrative.themeStatement ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Narrative Theme:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.stage1Narrative.themeStatement)}</td>
-        </tr>` : ''}
-        ${session.stage1Narrative.coreMessage ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Core Message:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.stage1Narrative.coreMessage)}</td>
-        </tr>` : ''}
-        ${session.stage1Narrative.flowHandoverNotes ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Section Transitions:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.stage1Narrative.flowHandoverNotes)}</td>
-        </tr>` : ''}
-        ${session.stage1Narrative.customerInvolvementNotes ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #46535e;">Customer Involvement:</td>
-          <td style="padding: 4px 8px;">${escapeHtml(session.stage1Narrative.customerInvolvementNotes)}</td>
-        </tr>` : ''}
-        ${session.signedOffBy ? `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-weight: bold; color: #059669;">Production Sign-Off:</td>
-          <td style="padding: 4px 8px; font-weight: bold; color: #059669;">Approved by ${escapeHtml(session.signedOffBy)} on ${escapeHtml(session.signedOffAt || 'N/A')}</td>
-        </tr>` : ''}
-      </table>
-
-      <h2 style="color: #252a2e; font-size: 18px; margin-top: 24px; margin-bottom: 12px;">Run of Show Sequence</h2>
-
-      <table style="width: 100%; border-collapse: collapse; border: 1px solid #d8dce0; font-size: 13px;">
-        <thead>
-          <tr style="background-color: #004f83; color: #ffffff;">
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: center; width: 40px; font-size: 12px;">#</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; width: 110px; font-size: 12px;">Time</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; width: 75px; font-size: 12px;">Duration</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; font-size: 12px;">Speaker(s)</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; font-size: 12px;">Topic / Segment</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; font-size: 12px;">Slide Link</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; font-size: 12px;">Handover / Transition</th>
-            <th style="padding: 10px 12px; border: 1px solid #003d66; text-align: left; font-size: 12px;">Stage Cues & AV Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-
-      <p style="margin-top: 20px; font-size: 11px; color: #7c878e; font-style: italic;">
-        Generated from Expo Staffing Production Hub on ${new Date().toLocaleDateString()}
-      </p>
-    </div>
-  `;
+/** The same document as HTML, for the in-app preview and for pasting into Google Docs. */
+export function generateKeynoteHtml(
+  sessions: KeynoteSession | KeynoteSession[],
+  stakeholders: KeyStakeholder[] = [],
+  ctx: RunOfShowContext = {}
+): string {
+  return renderRunOfShowHtml(docFor(sessions, stakeholders, ctx));
 }
 
 export async function copyFormattedForGoogleDocs(
-  session: KeynoteSession,
-  stakeholders: KeyStakeholder[] = []
+  sessions: KeynoteSession | KeynoteSession[],
+  stakeholders: KeyStakeholder[] = [],
+  ctx: RunOfShowContext = {}
 ): Promise<boolean> {
-  const html = generateKeynoteHtml(session, stakeholders);
-  const plainText = generateKeynoteMarkdown(session, stakeholders);
+  const html = generateKeynoteHtml(sessions, stakeholders, ctx);
+  const plainText = generateKeynoteMarkdown(sessions, stakeholders, ctx);
 
   try {
     if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-      const blobHtml = new Blob([html], { type: 'text/html' });
-      const blobText = new Blob([plainText], { type: 'text/plain' });
-      const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+      const data = [
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plainText], { type: 'text/plain' }),
+        }),
+      ];
       await navigator.clipboard.write(data);
       return true;
     }
@@ -554,21 +485,10 @@ export async function copyFormattedForGoogleDocs(
   return false;
 }
 
+export { escapeHtml };
+
 function escapePipes(str: string): string {
   return str.replace(/\|/g, '\\|').replace(/\n/g, ' ');
-}
-
-function formatStageLabel(stage: KeynoteStage): string {
-  switch (stage) {
-    case 'develop_run_of_show':
-      return 'Stage 1: Develop Run of Show';
-    case 'slide_deck_prep':
-      return 'Stage 2: Slide Deck Preparation & Rehearsals';
-    case 'signed_off':
-      return 'Stage 3: Signed Off & Locked';
-    default:
-      return stage;
-  }
 }
 
 function timeToMinutes(timeStr: string): number {
@@ -597,7 +517,8 @@ function getOffsetDate(baseDateStr: string, dayOffset: number): string {
   }
 }
 
-function createDefaultKeynoteSessions(eventId: string, eventStartDate?: string): KeynoteSession[] {
+/** Made-up sessions for trying the module out. Never added unless asked for. */
+export function createSampleKeynoteSessions(eventId: string, eventStartDate?: string): KeynoteSession[] {
   const targetDate = eventStartDate || new Date().toISOString().split('T')[0];
   return [
     {

@@ -47,7 +47,7 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
     };
     onChange([...rehearsals, item]);
     setIsAdding(false);
-    toast.success('Rehearsal scheduled.', 'Rehearsal Added');
+    toast.success('Rehearsal scheduled.');
   };
 
   const save = (id: string, draft: Draft) => {
@@ -67,7 +67,7 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
     );
     setEditingId(null);
     setAnnouncement(`Saved changes to ${draft.title.trim()}.`);
-    toast.success('Rehearsal updated.', 'Changes Saved');
+    toast.success('Rehearsal updated.');
   };
 
   const toggle = (id: string) =>
@@ -80,13 +80,9 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
           <div className="flex items-center gap-2">
             <Video className="h-4 w-4 text-[#0063a3]" aria-hidden="true" />
             <span className="text-xs font-bold text-[#252a2e]">
-              Rehearsal Schedule (2&ndash;3 Rehearsals ~1 Month Before Event)
+              Rehearsal schedule
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] text-[#5b6770]">
-            Track dry runs, full deck walkthroughs, and technical on-site rehearsals. Use the pencil to change any
-            detail.
-          </p>
         </div>
         <button
           type="button"
@@ -97,7 +93,7 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
           className="focus-ring flex cursor-pointer items-center gap-1 rounded border border-[#b9dcf0] px-2.5 py-1 text-xs font-semibold text-[#0063a3] hover:bg-[#e5f2f8]"
         >
           <Plus className="h-3 w-3" aria-hidden="true" />
-          <span>Add Rehearsal</span>
+          <span>Add rehearsal</span>
         </button>
       </div>
 
@@ -124,7 +120,7 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
                   locationOrUrl: r.locationOrUrl,
                   notes: r.notes ?? '',
                 }}
-                submitLabel="Save Changes"
+                submitLabel="Save changes"
                 onSubmit={(draft) => save(r.id, draft)}
                 onCancel={() => setEditingId(null)}
               />
@@ -194,7 +190,7 @@ export const RehearsalList: React.FC<RehearsalListProps> = ({ rehearsals, fallba
 
       {rehearsals.length === 0 && !isAdding && (
         <p className="rounded border border-dashed border-[#c5ccd3] px-3 py-6 text-center text-[11px] text-[#5b6770]">
-          No rehearsals scheduled. Add one to start tracking dry runs.
+          No rehearsals scheduled.
         </p>
       )}
 
@@ -226,7 +222,7 @@ const RehearsalForm: React.FC<{
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.title.trim()) {
-      toast.error('Give the rehearsal a title.', 'Missing Field');
+      toast.error('Give the rehearsal a title.', 'Missing field');
       titleRef.current?.focus();
       return;
     }

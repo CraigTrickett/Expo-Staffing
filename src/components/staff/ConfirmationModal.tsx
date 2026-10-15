@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Calendar,
-  Check,
-  CheckCircle2,
-  Clock,
-  Copy,
-  Download,
-  MapPin,
-  Sparkles,
-  User,
-  X,
-} from 'lucide-react';
+import { Calendar, Check, CheckCircle2, Copy, Download, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { EventConfig, ShiftBooking, StaffMember, TimeSlot } from '@/types';
 import { downloadStaffScheduleIcs } from '@/lib/calendar';
@@ -78,12 +67,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const handleDownloadIcs = () => {
     downloadStaffScheduleIcs(config, slots, currentStaff);
-    toast.success('Calendar .ics file downloaded! Open in Apple Calendar or Outlook.', 'Calendar Export');
+    toast.success('Calendar file downloaded.');
   };
 
   const handleCopySummary = () => {
     const lines = [
-      `Expo Staffing Schedule: ${config.title}`,
+      `Showrunner Schedule: ${config.title}`,
       `Staff Representative: ${currentStaff.name}`,
       `Total Hours: ${currentStaff.totalBookedHours} hrs (${myBookedShifts.length} shifts)`,
       `Location: ${config.location}`,
@@ -100,16 +89,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const summaryText = lines.join('\n');
     navigator.clipboard.writeText(summaryText);
     setCopiedSummary(true);
-    toast.success('Plaintext shift summary copied to clipboard!', 'Copied to Clipboard');
+    toast.success('Shift summary copied.');
     setTimeout(() => setCopiedSummary(false), 2500);
   };
 
   const handleGoogleCalendarSync = (slot: TimeSlot) => {
     const startIso = toIcsUtcString(zonedTimeToUtc(slot.date, slot.startTime, config.timezone));
     const endIso = toIcsUtcString(zonedTimeToUtc(slot.date, slot.endTime, config.timezone));
-    const title = encodeURIComponent(`Expo Staffing: ${config.title}`);
+    const title = encodeURIComponent(`Showrunner: ${config.title}`);
     const details = encodeURIComponent(
-      `Expo staffing shift for ${currentStaff.name}.\nEvent: ${config.title}\nLocation: ${config.location}`
+      `Booth shift for ${currentStaff.name}.\nEvent: ${config.title}\nLocation: ${config.location}`
     );
     const loc = encodeURIComponent(config.location);
     const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${loc}`;
@@ -137,7 +126,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               </span>
               {meetsTarget && (
                 <span className="text-[10px] bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0] px-2 py-0.5 rounded font-bold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#0063a3]" /> Target Met!
+                  Target met
                 </span>
               )}
             </div>
@@ -164,7 +153,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
           {myBookedShifts.length === 0 ? (
             <div className="p-8 text-center text-[#7c878e] text-xs">
-              No shifts booked yet. Tap any open slot on the matrix grid to claim!
+              No shifts booked yet.
             </div>
           ) : (
             myBookedShifts.map(({ slot, booking }) => (
@@ -200,7 +189,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     title="Create a Google Calendar event for this shift"
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Create Calendar Event</span>
+                    <span className="hidden sm:inline">Create calendar event</span>
                   </button>
 
                   {onReleaseShift && (
@@ -237,7 +226,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             >
               <Download className="w-5 h-5 text-[#b9dcf0] mt-0.5 shrink-0" />
               <div>
-                <div className="text-xs font-bold">Add to Calendar (.ICS)</div>
+                <div className="text-xs font-bold">Add to calendar (.ics)</div>
                 <div className="text-[10px] text-[#e5f2f8] leading-tight mt-0.5">
                   Universal calendar file for Apple Calendar & Outlook
                 </div>
@@ -257,7 +246,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               )}
               <div>
                 <div className="text-xs font-bold text-[#252a2e]">
-                  {copiedSummary ? 'Copied to Clipboard!' : 'Copy Shift Summary'}
+                  {copiedSummary ? 'Copied' : 'Copy shift summary'}
                 </div>
                 <div className="text-[10px] text-[#46535e] leading-tight mt-0.5">
                   Plaintext formatted list ready to send via Slack or DM

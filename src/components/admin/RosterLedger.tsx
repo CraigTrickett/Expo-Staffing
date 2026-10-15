@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Mail,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  UserCheck,
-  UserMinus,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { CheckCircle2, Pencil, Plus, Search, Trash2, UserPlus, Users } from 'lucide-react';
 import type { StaffMember } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
@@ -62,7 +49,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
     if (!editingId) return;
     const trimmedName = editName.trim();
     if (!trimmedName) {
-      toast.error('Name cannot be blank.', 'Invalid Name');
+      toast.error('Name cannot be blank.', 'Invalid name');
       return;
     }
     onUpdateMember?.(editingId, { name: trimmedName, email: editEmail.trim() });
@@ -207,7 +194,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
           className="px-4 py-2 bg-[#0063a3] hover:bg-[#005084] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-semibold shrink-0 transition-colors flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Add to Roster</span>
+          <span>Add to roster</span>
         </button>
       </form>
 
@@ -378,7 +365,7 @@ export const RosterLedger: React.FC<RosterLedgerProps> = ({
                             }}
                             className="px-2 py-1 bg-[#da3832] hover:bg-[#b0221d] text-white rounded text-[11px] font-semibold cursor-pointer"
                           >
-                            Confirm Delete
+                            Confirm delete
                           </button>
                           <button
                             type="button"

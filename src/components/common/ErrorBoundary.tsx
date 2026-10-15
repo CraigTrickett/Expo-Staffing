@@ -1,9 +1,11 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertCircle, RefreshCw, RotateCcw, ShieldAlert } from 'lucide-react';
-import { storage } from '@/lib/storage';
+import { RefreshCw, RotateCcw, ShieldAlert } from 'lucide-react';
+import { clearLocalData } from '@/lib/storage';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
+  /** How to reload the page. Only a test replaces this. */
+  onReload?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -36,15 +38,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   };
 
   handleResetStorage = () => {
-    try {
-      storage.resetToDemo();
-      localStorage.removeItem('boothduty_events_v2');
-      localStorage.removeItem('booth_duty_store');
-    } catch {
-      // ignore
-    }
+    // Clears everything kept on this device, including whatever bad data caused the error. Shared data
+    // is in the database and comes back. No demo event is added: that is only ever done on request.
+    clearLocalData();
     window.location.hash = '#/';
-    window.location.reload();
+    (this.props.onReload ?? (() => window.location.reload()))();
   };
 
   handleTryAgain = () => {
@@ -62,10 +60,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </div>
               <div>
                 <h1 className="text-xl font-bold text-[#252a2e] tracking-tight">
-                  Application Exception Detected
+                  Something went wrong
                 </h1>
                 <p className="text-xs text-[#46535e] mt-0.5">
-                  Expo Staffing caught an unexpected runtime error during render.
+                  Try again, or reload the page.
                 </p>
               </div>
             </div>
@@ -90,14 +88,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 className="focus-ring w-full sm:w-auto flex-1 px-4 py-2.5 bg-[#0063a3] hover:bg-[#005084] text-white text-xs font-bold rounded flex items-center justify-center space-x-2 transition-colors shadow-xs cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Try Again</span>
+                <span>Try again</span>
               </button>
               <button
                 type="button"
                 onClick={this.handleReload}
                 className="focus-ring w-full sm:w-auto px-4 py-2.5 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] text-xs font-semibold rounded transition-colors cursor-pointer shadow-xs"
               >
-                Reload Window
+                Reload page
               </button>
               <button
                 type="button"
@@ -106,7 +104,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 title="Wipes local state and re-seeds clean demo schedule"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Cache</span>
+                <span>Reset cache</span>
               </button>
             </div>
           </div>

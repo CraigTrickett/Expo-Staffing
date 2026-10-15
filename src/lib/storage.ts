@@ -36,7 +36,7 @@ export function createDemoEvent(): StoredEventData {
   const config: EventConfig = {
     id: eventId,
     title: 'SaaS Disrupt Expo 2026',
-    description: 'Premier B2B Cloud & AI Expo Staffing Schedule. Claim your shifts and sync directly to Google / Apple Calendar.',
+    description: 'Premier B2B Cloud & AI Expo booth staffing schedule. Claim your shifts and sync directly to Google / Apple Calendar.',
     location: 'Moscone West Convention Center, San Francisco, CA (Booth #742)',
     timezone: 'America/Los_Angeles',
     startDate,
@@ -147,6 +147,30 @@ export function createDemoEvent(): StoredEventData {
     slots: rawSlots,
     roster,
   };
+}
+
+/** Every key this app keeps on a device starts with one of these. */
+const LOCAL_KEY_PREFIXES = ['boothduty_', 'showrunner_'];
+
+/**
+ * Removes everything the app has stored on this device: events, working copies of shared data, identity
+ * and the last event used. Nothing is lost that the database also holds. Used by the error screen's
+ * reset, which must be able to clear whatever bad data caused the error.
+ */
+export function clearLocalData(): number {
+  if (!isBrowser()) return 0;
+  let removed = 0;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (LOCAL_KEY_PREFIXES.some((p) => key.startsWith(p))) {
+        localStorage.removeItem(key);
+        removed += 1;
+      }
+    }
+  } catch (err) {
+    console.warn('[storage] Could not clear local data:', err);
+  }
+  return removed;
 }
 
 export const storage = {

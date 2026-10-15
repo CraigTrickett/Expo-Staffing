@@ -14,8 +14,8 @@ test.describe('Staff shift claiming (no login required)', () => {
     await staffPage.goto(staffPath);
 
     await expect(staffPage.getByRole('heading', { name: 'Admin Sign In' })).not.toBeVisible();
-    await expect(staffPage.getByRole('button', { name: 'All Events' })).not.toBeVisible();
-    await expect(staffPage.getByRole('button', { name: /Log Out/i })).not.toBeVisible();
+    await expect(staffPage.getByRole('link', { name: 'All events' })).not.toBeVisible();
+    await expect(staffPage.getByRole('button', { name: /Account menu/i })).not.toBeVisible();
   });
 
   test('a new staff member can add themselves and claim an open shift', async ({ page, context }) => {

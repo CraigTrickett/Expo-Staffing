@@ -8,11 +8,9 @@ import {
   Mail,
   Phone,
   Briefcase,
-  Layers,
   Edit2,
   Trash2,
   Check,
-  CheckCircle2,
   Filter,
 } from 'lucide-react';
 import type { EventConfig, KeyStakeholder, StaffMember } from '@/types';
@@ -21,25 +19,25 @@ import {
   addStakeholder,
   updateStakeholder,
   deleteStakeholder,
+  addSampleStakeholders,
   INVOLVED_AREAS_OPTIONS,
   TEAMS_OPTIONS,
 } from '@/lib/stakeholders';
-import { useModalA11y } from '@/lib/hooks';
+import { usePageFocus } from '@/lib/hooks';
+import { usesOfStakeholder } from '@/lib/references';
 import { toast } from '@/components/common/Toast';
 import { useEventStore } from '@/store/useEventStore';
 
-interface KeyStakeholdersModalProps {
+interface KeyStakeholdersPageProps {
   event: EventConfig;
   onBack: () => void;
-  onClose: () => void;
 }
 
-export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
+export const KeyStakeholdersPage: React.FC<KeyStakeholdersPageProps> = ({
   event,
   onBack,
-  onClose,
-}) => {
-  const modalRef = useModalA11y(true, onClose);
+  }) => {
+  const modalRef = usePageFocus();
   const { roster, addRosterMember } = useEventStore();
   const [stakeholders, setStakeholders] = useState<KeyStakeholder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,11 +121,11 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error('First name and surname are required.', 'Missing Fields');
+      toast.error('First name and surname are required.', 'Missing fields');
       return;
     }
     if (!email.trim() || !email.includes('@')) {
-      toast.error('A valid email is required.', 'Missing Fields');
+      toast.error('A valid email is required.', 'Missing fields');
       return;
     }
 
@@ -143,7 +141,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
       });
       if (updated) {
         setStakeholders((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
-        toast.success(`Updated ${firstName} ${lastName}.`, 'Stakeholder Saved');
+        toast.success(`Updated ${firstName} ${lastName}.`);
       }
     } else {
       const created = addStakeholder(event.id, {
@@ -160,29 +158,27 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
       if (alsoAddToBoothRoster || involvedWith.includes('Expo Booths')) {
         addRosterMember(`${firstName.trim()} ${lastName.trim()}`, email.trim());
       }
-      toast.success(`Added ${firstName} ${lastName} to stakeholders.`, 'Stakeholder Added');
+      toast.success(`Added ${firstName} ${lastName} to stakeholders.`);
     }
 
     resetForm();
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!window.confirm(`Remove ${name} from Key Stakeholders?`)) return;
+    const uses = usesOfStakeholder(event.id, id);
+    const warning =
+      uses.length > 0
+        ? `\n\n${name} is used in:\n${uses.map((u) => `  \u2022 ${u}`).join('\n')}\n\nThey will still appear there by name, marked as removed.`
+        : '';
+    if (!window.confirm(`Remove ${name} from Key Stakeholders?${warning}`)) return;
     deleteStakeholder(event.id, id);
     setStakeholders((prev) => prev.filter((s) => s.id !== id));
-    toast.info(`Removed ${name}.`, 'Stakeholder Removed');
+    toast.info(`Removed ${name}.`);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
-      <div
-        ref={modalRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="stakeholders-modal-title"
-        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-5xl w-full max-h-[92vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
-      >
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <section ref={modalRef} tabIndex={-1} aria-labelledby="stakeholders-modal-title" className="flex flex-col rounded border border-[#d8dce0] bg-white shadow-xs focus:outline-hidden">
         {/* Header */}
         <div className="p-5 border-b border-[#d8dce0] bg-[#f8f9fa]">
           <div className="flex items-start justify-between gap-4">
@@ -191,25 +187,16 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                 type="button"
                 onClick={onBack}
                 className="focus-ring p-2 rounded text-[#46535e] hover:text-[#0063a3] hover:bg-[#e5f2f8] border border-[#d8dce0] hover:border-[#b9dcf0] bg-white transition-colors cursor-pointer shrink-0 mt-0.5"
-                title="Back to Admin Hub"
+                title="Back to menu"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#0063a3]">
-                    Event Administration Hub
-                  </span>
-                  <span className="text-[#5b6770]">&bull;</span>
-                  <span className="text-xs text-[#46535e]">{event.title}</span>
-                </div>
-                <h2 id="stakeholders-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5 flex items-center gap-2">
+                <p className="text-xs text-[#46535e]">{event.title}</p>
+                <h1 id="stakeholders-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5 flex items-center gap-2">
                   <Users className="w-5 h-5 text-[#0063a3]" />
-                  <span>Key Stakeholders Directory</span>
-                </h2>
-                <p className="text-xs text-[#46535e] mt-0.5">
-                  Manage contacts, executive speakers, team leads, and their cross-functional involvement across event areas.
-                </p>
+                  <span>Key Stakeholders</span>
+                </h1>
               </div>
             </div>
 
@@ -223,16 +210,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                 className="focus-ring px-3.5 py-1.5 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Stakeholder</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
+                <span>Add stakeholder</span>
               </button>
             </div>
           </div>
@@ -255,7 +233,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-[#5b6770] text-[11px] font-semibold">Team:</span>
-                <select
+                <select aria-label="Filter by team"
                   value={selectedTeamFilter}
                   onChange={(e) => setSelectedTeamFilter(e.target.value)}
                   className="bg-white border border-[#d8dce0] rounded px-2.5 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:border-[#0063a3]"
@@ -269,8 +247,8 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#5b6770] text-[11px] font-semibold">Involved With:</span>
-                <select
+                <span className="text-[#5b6770] text-[11px] font-semibold">Involved with:</span>
+                <select aria-label="Filter by area"
                   value={selectedAreaFilter}
                   onChange={(e) => setSelectedAreaFilter(e.target.value)}
                   className="bg-white border border-[#d8dce0] rounded px-2.5 py-1 text-xs text-[#252a2e] focus:outline-hidden focus:border-[#0063a3]"
@@ -296,10 +274,10 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
               className="bg-[#f0f7fb] border border-[#b9dcf0] rounded p-5 space-y-4 animate-[rise-in_220ms_cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#0063a3] flex items-center gap-1.5">
+                <h2 className="text-sm font-bold text-[#0063a3] flex items-center gap-1.5">
                   <Briefcase className="w-4 h-4" />
                   <span>{editingId ? 'Edit Stakeholder Contact' : 'Add New Key Stakeholder'}</span>
-                </h3>
+                </h2>
                 <button
                   type="button"
                   onClick={resetForm}
@@ -375,7 +353,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
               {/* Involved With Multiple Area Tags */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#252a2e] mb-1.5">
-                  Involved With (Where this stakeholder is linked across event areas):
+                  Involved with
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {INVOLVED_AREAS_OPTIONS.map((area) => {
@@ -435,7 +413,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                     onChange={(e) => setAlsoAddToBoothRoster(e.target.checked)}
                     className="rounded accent-[#0063a3] cursor-pointer"
                   />
-                  <span>Also sync this stakeholder into the Booth Staffing Roster for shift claiming</span>
+                  <span>Also add to the booth staff roster</span>
                 </label>
               )}
 
@@ -451,7 +429,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                   type="submit"
                   className="focus-ring px-4 py-1.5 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white shadow-xs cursor-pointer"
                 >
-                  {editingId ? 'Save Changes' : 'Add to Directory'}
+                  {editingId ? 'Save changes' : 'Add to directory'}
                 </button>
               </div>
             </form>
@@ -461,9 +439,6 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
           <div className="flex items-center justify-between text-xs text-[#5b6770]">
             <span>
               Showing <span className="font-semibold text-[#252a2e]">{filteredStakeholders.length}</span> stakeholders
-            </span>
-            <span className="text-[11px] text-[#46535e]">
-              Unified directory with booth staff roster
             </span>
           </div>
 
@@ -475,8 +450,8 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                   <tr className="bg-[#f8f9fa] border-b border-[#d8dce0] text-[#5b6770] font-semibold">
                     <th className="py-2.5 px-4">Stakeholder</th>
                     <th className="py-2.5 px-4">Team</th>
-                    <th className="py-2.5 px-4">Involved With</th>
-                    <th className="py-2.5 px-4">Contact Info</th>
+                    <th className="py-2.5 px-4">Involved with</th>
+                    <th className="py-2.5 px-4">Contact</th>
                     <th className="py-2.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -567,7 +542,20 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
 
             {filteredStakeholders.length === 0 && (
               <div className="py-12 text-center text-xs text-[#5b6770] space-y-2">
-                <p>No stakeholders found matching your filters.</p>
+                {stakeholders.length === 0 ? (
+                  <>
+                    <p>No key stakeholders yet.</p>
+                    <button
+                      type="button"
+                      onClick={() => setStakeholders(addSampleStakeholders(event.id))}
+                      className="focus-ring cursor-pointer rounded px-2 py-1 text-xs font-semibold text-[#46535e] underline hover:text-[#0063a3]"
+                    >
+                      Add sample data
+                    </button>
+                  </>
+                ) : (
+                  <p>No stakeholders found matching your filters.</p>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -576,7 +564,7 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
                   }}
                   className="focus-ring px-3 py-1.5 rounded text-xs font-semibold bg-[#0063a3] text-white hover:bg-[#005084] cursor-pointer"
                 >
-                  Add Your First Stakeholder
+                  Add your first stakeholder
                 </button>
               </div>
             )}
@@ -591,22 +579,10 @@ export const KeyStakeholdersModal: React.FC<KeyStakeholdersModalProps> = ({
             className="focus-ring px-3 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer flex items-center space-x-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Admin Hub</span>
-          </button>
-
-          <span className="text-[11px] text-[#5b6770] hidden sm:inline">
-            Changes save automatically to event data
-          </span>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="focus-ring px-4 py-1.5 rounded text-xs font-semibold bg-[#252a2e] hover:bg-[#1a1d20] text-white transition-colors cursor-pointer"
-          >
-            Close
+            <span>Back to menu</span>
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

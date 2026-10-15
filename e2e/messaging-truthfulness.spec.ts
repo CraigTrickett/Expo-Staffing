@@ -35,7 +35,7 @@ test.describe('User-facing messaging matches reality', () => {
     await createEventThroughWizard(page, { title });
 
     await page.goto('/#/');
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     await expect(page.getByText(title)).toBeVisible();
   });
 
@@ -46,17 +46,16 @@ test.describe('User-facing messaging matches reality', () => {
     await loginAsAdmin(page);
     await createEventThroughWizard(page, { title: `Count Before ${Date.now()}` });
 
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     const countBefore = await page.locator('[class*="border-\\[#d8dce0\\]"]', {
       hasText: /\u2013/, // en-dash used in the date range display
     }).count();
-    await page.getByRole('button', { name: 'Close' }).click().catch(() => {});
     await page.keyboard.press('Escape').catch(() => {});
 
     const newTitle = `Count Check ${Date.now()}`;
     await page.goto('/#/');
     await createEventThroughWizard(page, { title: newTitle });
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     await expect(page.getByText(newTitle)).toBeVisible();
 
     page.once('dialog', (dialog) => dialog.accept());

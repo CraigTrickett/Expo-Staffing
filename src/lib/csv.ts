@@ -13,8 +13,18 @@ export function escapeCsvField(value: string): string {
   return value;
 }
 
+/**
+ * Spreadsheets treat a cell that starts with =, +, - or @ (or a tab or return) as a formula. Staff type
+ * their own names and emails, so a name such as =HYPERLINK(...) would run when the file is opened.
+ * A leading apostrophe makes the cell plain text, and is not shown.
+ */
+export function neutraliseFormula(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 function toCsvRow(fields: (string | number)[]): string {
-  return fields.map((f) => escapeCsvField(String(f))).join(',');
+  // Numbers are ours and may be negative; only text from people needs neutralising.
+  return fields.map((f) => (typeof f === 'number' ? String(f) : escapeCsvField(neutraliseFormula(f)))).join(',');
 }
 
 /**

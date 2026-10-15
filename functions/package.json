@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Expo Staffing: Google Calendar auto-invite integration",
+  "description": "Cloud Functions for Showrunner: Google Calendar auto-invite integration",
   "engines": {
     "node": "20"
   },

@@ -16,7 +16,8 @@ import {
 } from '@/lib/matrix';
 import { generateNanoKey } from '@/lib/utils';
 import { storage, DEMO_ADMIN_KEY, DEMO_PUBLIC_KEY, createDemoEvent } from '@/lib/storage';
-import { claimShiftAtomic, fetchEventByKey, pushEventToFirebase, pushEventToFirebaseAsAdmin, subscribeToEvent } from '@/lib/firebase';
+import { claimShiftAtomic, fetchEventByKey, pushEventToFirebase, pushEventToFirebaseAsAdmin, pushStaffChange, subscribeToEvent } from '@/lib/firebase';
+import { isValidTimeZone, MAX_ROSTER_NAMES, normaliseCapacity } from '@/lib/eventPlan';
 import { toast } from '@/components/common/Toast';
 
 interface EventStoreState {
@@ -94,11 +95,11 @@ function recalculateStaffHours(slots: TimeSlot[], roster: StaffMember[]): StaffM
  * a local-only copy.
  */
 function syncToRemote(config: EventConfig, slots: TimeSlot[], roster: StaffMember[]): void {
-  pushEventToFirebase({ config, slots, roster }).then((ok) => {
+  pushStaffChange(config.id, slots, roster).then((ok) => {
     if (!ok) {
       toast.error(
         'Your last change could not be saved to the database. Check your connection and try again.',
-        'Not Saved'
+        'Not saved'
       );
     }
   });
@@ -115,7 +116,7 @@ function syncToRemoteAsAdmin(config: EventConfig, slots: TimeSlot[], roster: Sta
     if (!ok) {
       toast.error(
         'Your last change could not be saved to the database. Check your connection and try again.',
-        'Not Saved'
+        'Not saved'
       );
     }
   });
@@ -128,6 +129,13 @@ function syncToRemoteAsAdmin(config: EventConfig, slots: TimeSlot[], roster: Sta
  */
 function touchConfig(config: EventConfig): EventConfig {
   return { ...config, updatedAt: new Date().toISOString() };
+}
+
+/** The requested time zone if the browser knows it, else this browser's own, else a safe default. */
+function pickTimeZone(requested?: string): string {
+  if (requested && isValidTimeZone(requested)) return requested;
+  const own = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return own && isValidTimeZone(own) ? own : 'America/Los_Angeles';
 }
 
 let liveUnsubscribe: (() => void) | null = null;
@@ -194,15 +202,15 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
       title: payload.title.trim(),
       description:
         payload.description?.trim() ||
-        `Expo staffing schedule for ${payload.title.trim()}. Self-service shift signup powered by Expo Staffing.`,
+        `Staffing schedule for ${payload.title.trim()}. Self-service shift signup powered by Showrunner.`,
       location: payload.location?.trim() || '',
-      timezone: payload.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles',
+      timezone: pickTimeZone(payload.timezone),
       startDate: payload.startDate,
       endDate: payload.endDate,
       dailyStartTime: payload.dailyStartTime,
       dailyEndTime: payload.dailyEndTime,
       slotDurationMinutes: payload.slotDurationMinutes,
-      staffCapacityPerSlot: Math.max(1, payload.staffCapacityPerSlot),
+      staffCapacityPerSlot: normaliseCapacity(payload.staffCapacityPerSlot),
       adminKey,
       publicKey,
       createdAt: new Date().toISOString(),
@@ -212,6 +220,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     const initialRoster: StaffMember[] = (payload.rosterNames || [])
       .map((s) => s.trim())
       .filter(Boolean)
+      .slice(0, MAX_ROSTER_NAMES)
       .map((name, idx) => ({
         id: `staff_${generateNanoKey()}_${idx}`,
         eventId,
@@ -343,8 +352,9 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
     let targetMember: StaffMember;
 
     if (staffId === 'new' || !staffId) {
-      const cleanName = (newName || 'New Representative').trim();
-      const cleanEmail = (newEmail || '').trim();
+      // Staff type these on the open page, so a blank name falls back to a default and both are capped.
+      const cleanName = (newName ?? '').trim().slice(0, 100) || 'New Representative';
+      const cleanEmail = (newEmail ?? '').trim().slice(0, 200);
 
       // Check if already in roster by name or email
       const existing = roster.find(
@@ -494,7 +504,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
           error: conflictMsg,
         });
 
-        toast.error(conflictMsg, 'Shift Conflict');
+        toast.error(conflictMsg, 'Shift conflict');
         return false;
       }
 
@@ -529,9 +539,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
         optimisticRollbackCache: null,
       });
       toast.success(
-        `Claimed ${targetSlot.startTime} - ${targetSlot.endTime} shift!`,
-        'Shift Confirmed'
-      );
+        `Claimed ${targetSlot.startTime} - ${targetSlot.endTime}.`);
       return true;
     } catch (err) {
       // Rollback optimistic update
@@ -550,7 +558,7 @@ export const useEventStore = create<EventStoreState>((set, get) => ({
         optimisticRollbackCache: null,
         error: 'Failed to persist booking. Please try again.',
       });
-      toast.error('Failed to persist shift booking. Rolled back.', 'Storage Error');
+      toast.error('The booking could not be saved and was undone.', 'Storage error');
       return false;
     }
   },

@@ -199,7 +199,7 @@ export const ShiftTile: React.FC<ShiftTileProps> = ({
             className="focus-ring w-full py-1.5 px-3 rounded text-xs font-semibold bg-[#0063a3] hover:bg-[#005084] text-white border border-[#0063a3] transition-colors flex items-center justify-center space-x-1.5 shadow-xs active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>{currentIdentity ? 'Claim This Shift' : 'Sign Up for Shift'}</span>
+            <span>{currentIdentity ? 'Claim this shift' : 'Sign up for shift'}</span>
           </button>
         )}
       </div>

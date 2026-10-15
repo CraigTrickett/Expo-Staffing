@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  QrCode,
-  Share2,
-  Shield,
-  Sparkles,
-  Users,
-  X,
-} from 'lucide-react';
+import { Check, Copy, ExternalLink, QrCode, Share2, Shield, Users, X } from 'lucide-react';
 import type { EventConfig } from '@/types';
 import { toast } from '@/components/common/Toast';
 import { cn } from '@/lib/utils';
@@ -41,14 +31,14 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
   const handleCopyAdmin = () => {
     navigator.clipboard.writeText(adminUrl);
     setCopiedAdmin(true);
-    toast.success('Admin link copied.', 'Link Copied');
+    toast.success('Admin link copied.');
     setTimeout(() => setCopiedAdmin(false), 2500);
   };
 
   const handleCopyPublic = () => {
     navigator.clipboard.writeText(publicUrl);
     setCopiedPublic(true);
-    toast.success('Public staff signup link copied! Ready to share with your team.', 'Staff Link Copied');
+    toast.success('Staff link copied.');
     setTimeout(() => setCopiedPublic(false), 2500);
   };
 
@@ -76,9 +66,6 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
             <h3 id="share-modal-title" className="text-xl font-bold text-[#252a2e] tracking-tight">
               Share &ldquo;{config.title}&rdquo;
             </h3>
-            <p className="text-xs text-[#46535e]">
-              One link for staff self-service, one for you to reach this event's admin dashboard.
-            </p>
           </div>
 
           <button
@@ -105,11 +92,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
             </span>
           </div>
 
-          <p className="text-xs text-[#46535e] leading-relaxed">
-            Send this link to your expo representatives via Slack, email, or WhatsApp. They can claim open shifts with 1 tap without any login required.
-          </p>
-
-          <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
@@ -138,7 +121,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               className="text-[#0063a3] hover:text-[#005084] flex items-center space-x-1 font-semibold transition-colors cursor-pointer"
             >
               <QrCode className="w-3.5 h-3.5" />
-              <span>{showQrCode ? 'Hide QR Code' : 'Display Mobile QR Code'}</span>
+              <span>{showQrCode ? 'Hide QR code' : 'Show QR code'}</span>
             </button>
             <a
               href={publicUrl}
@@ -146,7 +129,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
               rel="noopener noreferrer"
               className="text-[#0063a3] hover:text-[#005084] flex items-center space-x-1 font-semibold transition-colors"
             >
-              <span>Open Staff</span>
+              <span>Open staff</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
@@ -226,9 +209,6 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
                   <rect x="95" y="95" width="6" height="6" fill="black" />
                 </svg>
               </div>
-              <p className="text-[11px] font-medium text-[#46535e]">
-                Point any smartphone camera to claim expo shifts instantly
-              </p>
             </div>
           )}
         </div>
@@ -247,14 +227,7 @@ export const AdminShareModal: React.FC<AdminShareModalProps> = ({
             </span>
           </div>
 
-          <div className="p-2.5 bg-white rounded border border-[#b9dcf0] text-[11px] text-[#252a2e] flex items-start space-x-2">
-            <Shield className="w-4 h-4 text-[#0063a3] shrink-0 mt-0.5" />
-            <span>
-              This takes you straight to this event once you're signed in. Opening it without signing
-              in shows a login screen, not the dashboard — sharing it with staff by accident won't give
-              them admin access, but the staff link below is still the right one to send them.
-            </span>
-          </div>
+          <p className="text-[11px] text-[#46535e]">Needs sign-in. Send staff the staff link instead.</p>
 
           <div className="flex items-center gap-2">
             <input

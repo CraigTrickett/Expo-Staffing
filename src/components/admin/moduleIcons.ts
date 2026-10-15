@@ -1,0 +1,41 @@
+import type React from 'react';
+import {
+  BadgeDollarSign,
+  Calculator,
+  CalendarRange,
+  Clock,
+  FolderOpen,
+  Gift,
+  IdCard,
+  Inbox,
+  LayoutDashboard,
+  Megaphone,
+  Mic,
+  PartyPopper,
+  ShieldAlert,
+  Store,
+  Truck,
+  Users,
+  Utensils,
+} from 'lucide-react';
+
+/** Icon for each hub card, by the iconName on its AdminModuleItem. */
+export const MODULE_ICONS: Record<string, React.ElementType> = {
+  Store,
+  Users,
+  Clock,
+  BadgeDollarSign,
+  Gift,
+  Mic,
+  CalendarRange,
+  FolderOpen,
+  PartyPopper,
+  Calculator,
+  Megaphone,
+  Truck,
+  IdCard,
+  Utensils,
+  ShieldAlert,
+  LayoutDashboard,
+  Inbox,
+};

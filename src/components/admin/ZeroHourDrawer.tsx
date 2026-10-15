@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-import {
-  AlertTriangle,
-  Check,
-  Clock,
-  Copy,
-  ExternalLink,
-  Mail,
-  MessageSquare,
-  Sparkles,
-  User,
-  Users,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Check, Copy, Mail, MessageSquare, X } from 'lucide-react';
 import type { EventConfig, StaffMember } from '@/types';
 import { toast } from '@/components/common/Toast';
 import { cn } from '@/lib/utils';
@@ -49,7 +37,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
   const handleCopySlackNudge = () => {
     navigator.clipboard.writeText(slackMessage);
     setCopiedSlack(true);
-    toast.success('Slack reminder copied to clipboard! Paste into your team channel.', 'Copied to Clipboard');
+    toast.success('Slack reminder copied.');
     setTimeout(() => setCopiedSlack(false), 2500);
   };
 
@@ -57,7 +45,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
     const individualMsg = `Hi ${member.name}! Just a quick nudge regarding ${config.title}: you haven't claimed your required ${targetHours} hours for expo staffing yet. Please pick your slots here: ${publicUrl}`;
     navigator.clipboard.writeText(individualMsg);
     setCopiedIndividualId(member.id);
-    toast.success(`Direct reminder for ${member.name} copied!`, 'Copied');
+    toast.success(`Reminder for ${member.name} copied.`);
     setTimeout(() => setCopiedIndividualId(null), 2500);
   };
 
@@ -67,7 +55,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
       toast.warning('No emails recorded for these staff members.');
       return;
     }
-    const subject = `Expo Staffing Reminder: ${config.title}`;
+    const subject = `Showrunner Reminder: ${config.title}`;
     const locationClause = config.location ? ` at ${config.location}` : '';
     const body = `Hi everyone,\n\nWe are organizing the staff schedule for ${config.title}${locationClause}.\n\nEach team member is asked to commit to ${targetHours} hours on the expo floor.\n\nPlease claim your open shifts using this self-service link:\n${publicUrl}\n\nThank you!`;
     window.location.href = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -147,12 +135,12 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                 {copiedSlack ? (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>Copied to Clipboard!</span>
+                    <span>Copied</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Slack Nudge</span>
+                    <span>Copy Slack nudge</span>
                   </>
                 )}
               </button>
@@ -161,10 +149,9 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                 type="button"
                 onClick={handleEmailAll}
                 className="focus-ring py-2 px-3 bg-white hover:bg-[#f1f3f6] text-[#252a2e] rounded text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-[#d8dce0] cursor-pointer shadow-xs"
-                title="Open default email client with all unassigned staff in recipient list"
               >
                 <Mail className="w-3.5 h-3.5 text-[#fbad26]" />
-                <span>Email All</span>
+                <span>Email all</span>
               </button>
             </div>
           </div>
@@ -176,15 +163,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
             </div>
 
             {zeroHoursStaff.length === 0 ? (
-              <div className="py-12 text-center space-y-2">
-                <div className="w-12 h-12 rounded-full bg-[#e6f5ec] text-[#00823b] flex items-center justify-center mx-auto">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div className="text-sm font-bold text-[#252a2e]">Full Team Engagement!</div>
-                <p className="text-xs text-[#46535e] max-w-xs mx-auto">
-                  Every representative in the roster has claimed at least one expo staffing shift.
-                </p>
-              </div>
+              <p className="py-12 text-center text-sm font-semibold text-[#252a2e]">Everyone has claimed a shift.</p>
             ) : (
               zeroHoursStaff.map((member) => (
                 <div
@@ -227,7 +206,7 @@ export const ZeroHourDrawer: React.FC<ZeroHourDrawerProps> = ({
                     </button>
                     {member.email && (
                       <a
-                        href={`mailto:${member.email}?subject=${encodeURIComponent(`Expo Staffing Shifts: ${config.title}`)}&body=${encodeURIComponent(`Hi ${member.name},\n\nPlease grab your expo staffing shifts here:\n${publicUrl}`)}`}
+                        href={`mailto:${member.email}?subject=${encodeURIComponent(`Showrunner Shifts: ${config.title}`)}&body=${encodeURIComponent(`Hi ${member.name},\n\nPlease grab your expo staffing shifts here:\n${publicUrl}`)}`}
                         className="focus-ring p-2 bg-white text-[#46535e] hover:text-[#0063a3] hover:bg-[#f1f3f6] border border-[#d8dce0] rounded text-xs transition-colors"
                         title={`Send email reminder to ${member.name}`}
                       >

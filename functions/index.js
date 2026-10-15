@@ -3,6 +3,8 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
+const { createAdminUserService, ServiceError, normaliseEmail, OWNER_EMAILS } = require('./adminUsers');
 
 initializeApp();
 // Optional: only needed when Firestore was provisioned under a named
@@ -22,25 +24,63 @@ const EVENTS_COLLECTION = 'boothEvents';
 // from any client — only these Cloud Functions (running with admin
 // privileges) ever touch it. Never expose refresh tokens to the browser.
 const TOKENS_COLLECTION = 'organizerCalendarTokens';
+// Finds an event from its public (staff) key. See firestore.rules.
+const PUBLIC_LINKS_COLLECTION = 'publicLinks';
 
-// Kept in sync with ALLOWED_ADMIN_EMAILS in src/lib/firebase.ts. This is
-// the real enforcement point — the client-side allowlist check is only a
-// UX convenience and could be bypassed by anyone calling these functions
-// directly, so every sensitive action re-checks the caller's verified
-// Firebase Auth identity here regardless of what the client claims.
-const ALLOWED_ADMIN_EMAILS = ['craig_trickett@trimble.com', 'craigtrickett@gmail.com'];
+// Owners are fixed in adminUsers.js (kept in step with ALLOWED_ADMIN_EMAILS in
+// src/lib/firebase.ts and firestore.rules). Other admins are granted and revoked
+// through the user manager and stored in the adminUsers collection. This is the
+// real enforcement point: the client-side check is only a convenience, and could
+// be bypassed by anyone calling these functions directly, so every sensitive action
+// re-checks the caller's verified Firebase Auth identity here.
+const adminUsers = createAdminUserService({ db, auth: getAuth(), owners: OWNER_EMAILS });
 
 /**
- * Throws if the caller isn't authenticated as one of the allowed admin
- * emails. request.auth is populated by Firebase from the caller's ID
- * token — it cannot be forged by a client claiming to be someone else.
+ * Throws if the caller isn't signed in as an owner or a granted admin.
+ * request.auth is populated by Firebase from the caller's ID token, so it
+ * cannot be forged by a client claiming to be someone else.
  */
-function requireAdmin(request) {
-  const email = (request.auth && request.auth.token && request.auth.token.email || '').toLowerCase();
-  if (!request.auth || !ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email)) {
+async function requireAdmin(request) {
+  const email = normaliseEmail(request.auth && request.auth.token && request.auth.token.email);
+  if (!request.auth || !(await adminUsers.isAdmin(email))) {
     throw new HttpsError('permission-denied', 'You must be signed in as an authorized admin.');
   }
+  return email;
 }
+
+/** Maps a ServiceError from adminUsers.js onto the matching HttpsError. */
+function asHttpsError(err) {
+  if (err instanceof ServiceError) return new HttpsError(err.code, err.message);
+  console.error('[adminUsers] unexpected failure:', err);
+  return new HttpsError('internal', 'Something went wrong. Please try again.');
+}
+
+exports.listAdminUsers = onCall(async (request) => {
+  await requireAdmin(request);
+  try {
+    return await adminUsers.list();
+  } catch (err) {
+    throw asHttpsError(err);
+  }
+});
+
+exports.grantAdminUser = onCall(async (request) => {
+  const caller = await requireAdmin(request);
+  try {
+    return await adminUsers.grant(caller, (request.data || {}).email);
+  } catch (err) {
+    throw asHttpsError(err);
+  }
+});
+
+exports.revokeAdminUser = onCall(async (request) => {
+  const caller = await requireAdmin(request);
+  try {
+    return await adminUsers.revoke(caller, (request.data || {}).email);
+  } catch (err) {
+    throw asHttpsError(err);
+  }
+});
 
 const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -53,7 +93,7 @@ const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 exports.exchangeGoogleAuthCode = onCall(
   { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI] },
   async (request) => {
-    requireAdmin(request);
+    await requireAdmin(request);
 
     const { eventId, code } = request.data || {};
     if (!eventId || !code) {
@@ -105,7 +145,7 @@ exports.exchangeGoogleAuthCode = onCall(
  * Does not attempt to cancel already-created calendar events.
  */
 exports.disconnectGoogleCalendar = onCall(async (request) => {
-  requireAdmin(request);
+  await requireAdmin(request);
 
   const { eventId } = request.data || {};
   if (!eventId) {
@@ -131,7 +171,7 @@ exports.disconnectGoogleCalendar = onCall(async (request) => {
  * bookings on this event.
  */
 exports.deleteEvent = onCall(async (request) => {
-  requireAdmin(request);
+  await requireAdmin(request);
 
   const { eventId } = request.data || {};
   if (!eventId) {
@@ -145,8 +185,12 @@ exports.deleteEvent = onCall(async (request) => {
     return { deleted: true };
   }
 
+  const publicKey = (eventSnap.data() || {}).publicKey;
   await db.collection(TOKENS_COLLECTION).doc(eventId).delete();
-  await eventRef.delete();
+  if (publicKey) await db.collection(PUBLIC_LINKS_COLLECTION).doc(String(publicKey)).delete();
+  // recursiveDelete also removes the event's module documents (budget, schedule and so on),
+  // which a plain delete would leave behind.
+  await db.recursiveDelete(eventRef);
 
   return { deleted: true };
 });
@@ -160,21 +204,29 @@ exports.deleteEvent = onCall(async (request) => {
  * would have no way to check that.
  */
 exports.adminUpdateEvent = onCall(async (request) => {
-  requireAdmin(request);
+  await requireAdmin(request);
 
   const { eventId, config, slots, roster } = request.data || {};
   if (!eventId || !config || !slots || !roster) {
     throw new HttpsError('invalid-argument', 'eventId, config, slots, and roster are all required.');
   }
 
-  await db.collection(EVENTS_COLLECTION).doc(eventId).set({
-    adminKey: config.adminKey,
-    publicKey: config.publicKey,
-    config,
-    slots,
-    roster,
-    updatedAt: new Date().toISOString(),
-  });
+  // merge: keeps anything else on the document, instead of rebuilding it from only these fields.
+  await db.collection(EVENTS_COLLECTION).doc(eventId).set(
+    {
+      adminKey: config.adminKey,
+      publicKey: config.publicKey,
+      config,
+      slots,
+      roster,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+  // Staff open the event through this entry, so it must exist for every event.
+  if (config.publicKey) {
+    await db.collection(PUBLIC_LINKS_COLLECTION).doc(String(config.publicKey)).set({ eventId });
+  }
 
   return { success: true };
 });
@@ -280,7 +332,7 @@ exports.onEventWrite = onDocumentWritten(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            summary: `Expo Staffing: ${config.title}`,
+            summary: `Showrunner: ${config.title}`,
             location: config.location,
             description: `Shift for ${booking.staffName} — ${config.title}`,
             start: { dateTime: `${slot.date}T${slot.startTime}:00`, timeZone: config.timezone || 'UTC' },

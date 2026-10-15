@@ -9,18 +9,13 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
-  Copy,
-  Download,
   Trash2,
   Edit2,
-  FileText,
-  Users,
   Presentation,
-  Check,
   ChevronRight,
-  Sparkles,
   Layers,
   Video,
+  ListChecks,
 } from 'lucide-react';
 import type {
   EventConfig,
@@ -35,39 +30,54 @@ import {
   updateKeynoteSession,
   deleteKeynoteSession,
   describeTimingStatus,
-  generateKeynoteMarkdown,
   sessionWindowMinutes,
   timingStatus,
   totalSegmentMinutes,
-  downloadMarkdownFile,
-  copyFormattedForGoogleDocs,
 } from '@/lib/keynote';
 import { getStakeholders } from '@/lib/stakeholders';
-import { useModalA11y } from '@/lib/hooks';
+import { usePageFocus } from '@/lib/hooks';
 import { toast } from '@/components/common/Toast';
 import { formatDate } from '@/lib/utils';
 import { StageSection } from './keynote/StageSection';
 import { RunOfShowEditor } from './keynote/RunOfShowEditor';
 import { RehearsalList } from './keynote/RehearsalList';
 import { RunOfShowExportSection } from './keynote/RunOfShowExportSection';
+import { RoomField } from './keynote/RoomField';
+import { KeynoteEmptyState } from './keynote/KeynoteEmptyState';
+import { TaskList } from '@/components/common/TaskList';
+import { useModuleData } from '@/lib/useModuleData';
+import { EMPTY_DOCUMENT_SETTINGS } from '@/lib/runOfShowDoc';
+import { createEmptyTasks, normaliseTasks, tasksForModule, TASKS_MODULE_ID } from '@/lib/tasks';
+import type { KeynoteDocumentSettings } from '@/types/keynoteDocument';
+import type { TasksData } from '@/types/tasks';
 
-interface KeynoteSessionModalProps {
+const KEYNOTE_MODULE_ID = 'keynote-general-session';
+
+interface KeynotePageProps {
   event: EventConfig;
   onBack: () => void;
-  onClose: () => void;
   onManageStakeholders?: () => void;
 }
 
-export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
+export const KeynotePage: React.FC<KeynotePageProps> = ({
   event,
   onBack,
-  onClose,
   onManageStakeholders,
 }) => {
-  const modalRef = useModalA11y(true, onClose);
+  const modalRef = usePageFocus();
   const [sessions, setSessions] = useState<KeynoteSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [stakeholders, setStakeholders] = useState<KeyStakeholder[]>([]);
+  const [openItemsOpen, setOpenItemsOpen] = useState(false);
+  // Shared by both export panels, so editing document details in one shows in the other.
+  const docSettings = useModuleData<KeynoteDocumentSettings>(
+    event.id,
+    'keynote-document',
+    () => ({ ...EMPTY_DOCUMENT_SETTINGS }),
+    (raw) => ({ ...EMPTY_DOCUMENT_SETTINGS, ...(raw as Partial<KeynoteDocumentSettings>) })
+  );
+  const tasks = useModuleData<TasksData>(event.id, TASKS_MODULE_ID, createEmptyTasks, (raw) => normaliseTasks(raw as Partial<TasksData>));
+  const openItems = tasksForModule(tasks.data.tasks, KEYNOTE_MODULE_ID);
 
   // Production stages start folded; the summary line on each header says where it stands.
   const [openStages, setOpenStages] = useState<Record<KeynoteStage, boolean>>({
@@ -83,6 +93,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const [newSessionStartTime, setNewSessionStartTime] = useState('09:00');
   const [newSessionEndTime, setNewSessionEndTime] = useState('10:30');
   const [newSessionRoom, setNewSessionRoom] = useState('Mainstage Hall A');
+  const [newSessionSpaceId, setNewSessionSpaceId] = useState<string | undefined>(undefined);
 
   // Edit session state
   const [isEditingSession, setIsEditingSession] = useState(false);
@@ -91,6 +102,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editRoom, setEditRoom] = useState('');
+  const [editSpaceId, setEditSpaceId] = useState<string | undefined>(undefined);
   const [editDeckUrl, setEditDeckUrl] = useState('');
 
   // Delete session modal state
@@ -125,7 +137,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const handleCreateNewSession = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSessionTitle.trim()) {
-      toast.error('Session title is required.', 'Missing Field');
+      toast.error('Session title is required.', 'Missing field');
       return;
     }
     const created = createKeynoteSession(event.id, {
@@ -134,12 +146,13 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
       startTime: newSessionStartTime,
       endTime: newSessionEndTime,
       stageOrRoom: newSessionRoom,
+      spaceId: newSessionSpaceId,
     });
     setSessions((prev) => [...prev, created]);
     setActiveSessionId(created.id);
     setIsCreatingSession(false);
     setNewSessionTitle('');
-    toast.success(`Created session "${created.title}".`, 'Session Created');
+    toast.success(`Created session "${created.title}".`);
   };
 
   const handleStartEditSession = () => {
@@ -149,6 +162,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
     setEditStartTime(activeSession.startTime || '09:00');
     setEditEndTime(activeSession.endTime || '10:30');
     setEditRoom(activeSession.stageOrRoom || 'Mainstage Hall A');
+    setEditSpaceId(activeSession.spaceId);
     setEditDeckUrl(activeSession.slideDeckUrl || '');
     setIsEditingSession(true);
   };
@@ -157,7 +171,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
     e.preventDefault();
     if (!activeSession) return;
     if (!editTitle.trim()) {
-      toast.error('Session title cannot be empty.', 'Title Required');
+      toast.error('Session title cannot be empty.', 'Title required');
       return;
     }
 
@@ -167,10 +181,11 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
       startTime: editStartTime.trim() || '09:00',
       endTime: editEndTime.trim() || '10:30',
       stageOrRoom: editRoom.trim() || 'Mainstage',
+      spaceId: editSpaceId,
       slideDeckUrl: editDeckUrl.trim() || undefined,
     });
     setIsEditingSession(false);
-    toast.success('Session details successfully updated.', 'Session Updated');
+    toast.success('Session updated.');
   };
 
   const handleInitiateDelete = (session: KeynoteSession) => {
@@ -181,7 +196,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const handleConfirmDelete = () => {
     if (!sessionToDelete) return;
     if (deleteConfirmInput.trim().toUpperCase() !== 'DELETE') {
-      toast.error('Please type DELETE to confirm session deletion.', 'Confirmation Required');
+      toast.error('Please type DELETE to confirm session deletion.', 'Confirmation required');
       return;
     }
 
@@ -205,7 +220,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
       setActiveSessionId(created.id);
     }
 
-    toast.success(`Session "${targetTitle}" has been permanently deleted.`, 'Session Deleted');
+    toast.success(`Deleted "${targetTitle}".`);
     setSessionToDelete(null);
     setDeleteConfirmInput('');
   };
@@ -220,11 +235,11 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const handleSetStage = (stage: KeynoteStage): boolean => {
     if (!activeSession) return false;
     if (stage === 'signed_off' && !activeSession.slideDeckUrl) {
-      toast.error('Stage 2 slide deck URL must be provided before final sign-off.', 'Slide Deck Required');
+      toast.error('Stage 2 slide deck URL must be provided before final sign-off.', 'Slide deck required');
       return false;
     }
     handleUpdateActiveSession({ currentStage: stage });
-    toast.info(`Advanced to ${stage === 'signed_off' ? 'Stage 3: Sign Off' : stage === 'slide_deck_prep' ? 'Stage 2: Slide Deck Preparation' : 'Stage 1: Develop Run of Show'}.`, 'Stage Updated');
+    toast.info(`Advanced to ${stage === 'signed_off' ? 'Stage 3: Sign Off' : stage === 'slide_deck_prep' ? 'Stage 2: Slide Deck Preparation' : 'Stage 1: Develop Run of Show'}.`);
     return true;
   };
 
@@ -236,39 +251,20 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
       signedOffBy: name,
       signedOffAt: new Date().toLocaleString(),
     });
-    toast.success(`Session signed off and locked by ${name}!`, 'Production Signed Off');
-  };
-
-  const handleCopyGoogleDocs = async () => {
-    if (!activeSession) return;
-    const ok = await copyFormattedForGoogleDocs(activeSession, stakeholders);
-    if (ok) {
-      toast.success(
-        'Formatted run of show copied! Paste directly into Google Docs (Ctrl+V / Cmd+V) to preserve tables and styling.',
-        'Ready for Google Docs'
-      );
-    } else {
-      toast.error('Could not copy to clipboard. Please check browser permissions.', 'Copy Failed');
-    }
-  };
-
-  const handleCopyMarkdown = () => {
-    if (!activeSession) return;
-    const md = generateKeynoteMarkdown(activeSession, stakeholders);
-    navigator.clipboard.writeText(md);
-    toast.success('Run of show copied to clipboard in Markdown table format!', 'Markdown Copied');
-  };
-
-  const handleDownloadMarkdown = () => {
-    if (!activeSession) return;
-    const md = generateKeynoteMarkdown(activeSession, stakeholders);
-    const filename = `${activeSession.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-run-of-show.md`;
-    downloadMarkdownFile(filename, md);
-    toast.success(`Downloaded ${filename}`, 'Export Complete');
+    toast.success(`Signed off by ${name}.`);
   };
 
   if (!activeSession) {
-    return null;
+    return (
+      <KeynoteEmptyState
+        event={event}
+        onBack={onBack}
+        onSessions={(list, activeId) => {
+          setSessions(list);
+          setActiveSessionId(activeId);
+        }}
+      />
+    );
   }
 
   const segmentCount = activeSession.segments.length;
@@ -278,7 +274,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
   const stage1Summary = `${segmentCount} ${segmentCount === 1 ? 'segment' : 'segments'} \u00b7 ${plannedMinutes} min planned \u00b7 ${describeTimingStatus(timing)} \u00b7 Narrative ${
     activeSession.stage1Narrative.confirmedNarrative ? 'confirmed' : 'not yet confirmed'
   }`;
-  const stage2Summary = `${activeSession.slideDeckUrl ? 'Master deck linked' : 'No master deck yet'} \u00b7 ${
+  const stage2Summary = `${activeSession.slideDeckUrl ? 'Deck linked' : 'No deck yet'} \u00b7 ${
     activeSession.weeklyMeeting.enabled
       ? `Weekly sync ${activeSession.weeklyMeeting.dayOfWeek} ${activeSession.weeklyMeeting.time}`
       : 'Weekly sync off'
@@ -288,15 +284,8 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
     : 'Not signed off yet';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
-      <div
-        ref={modalRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="keynote-modal-title"
-        className="modal-panel bg-white border border-[#d8dce0] rounded max-w-[98vw] 2xl:max-w-[1760px] w-full max-h-[96vh] flex flex-col shadow-modus-3 focus:outline-hidden overflow-hidden"
-      >
+    <div className="mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 lg:px-8">
+      <section ref={modalRef} tabIndex={-1} aria-labelledby="keynote-modal-title" className="flex flex-col rounded border border-[#d8dce0] bg-white shadow-xs focus:outline-hidden">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-[#d8dce0] bg-[#f8f9fa]">
           <div className="flex items-start justify-between gap-4">
@@ -305,67 +294,20 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 type="button"
                 onClick={onBack}
                 className="focus-ring p-2 rounded text-[#46535e] hover:text-[#0063a3] hover:bg-[#e5f2f8] border border-[#d8dce0] hover:border-[#b9dcf0] bg-white transition-colors cursor-pointer shrink-0 mt-0.5"
-                title="Back to Admin Hub"
+                title="Back to menu"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#0063a3]">
-                    Event Administration Hub
-                  </span>
-                  <span className="text-[#5b6770]">&bull;</span>
-                  <span className="text-xs text-[#46535e]">{event.title}</span>
-                </div>
-                <h2 id="keynote-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5 flex items-center gap-2">
+                <p className="text-xs text-[#46535e]">{event.title}</p>
+                <h1 id="keynote-modal-title" className="text-lg font-bold text-[#252a2e] mt-0.5 flex items-center gap-2">
                   <Mic className="w-5 h-5 text-[#0063a3]" />
-                  <span>Keynote / General Session Production Hub</span>
-                </h2>
-                <p className="text-xs text-[#46535e] mt-0.5">
-                  Plan the run-of-show order, narrative flow, slide deck links, weekly syncs, rehearsals, and export structured Markdown.
-                </p>
+                  <span>Keynote / General Session</span>
+                </h1>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleCopyGoogleDocs}
-                className="focus-ring px-3 py-1.5 rounded text-xs font-semibold bg-[#0063a3] text-white hover:bg-[#005084] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                title="Copy formatted document for Google Docs"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copy for Google Docs</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyMarkdown}
-                className="focus-ring px-2.5 py-1.5 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Copy structured Markdown table"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Copy Markdown</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadMarkdown}
-                className="focus-ring px-2.5 py-1.5 rounded text-xs font-semibold bg-white hover:bg-[#f1f3f6] text-[#46535e] border border-[#d8dce0] flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                title="Download .md file"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Export .md</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="focus-ring p-1.5 text-[#5b6770] hover:text-[#252a2e] hover:bg-[#e5e9ec] rounded transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
@@ -394,10 +336,9 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 type="button"
                 onClick={() => setIsCreatingSession(true)}
                 className="px-2.5 py-1.5 rounded text-xs font-semibold text-[#0063a3] hover:bg-[#e5f2f8] border border-dashed border-[#b9dcf0] transition-colors cursor-pointer flex items-center gap-1"
-                title="Add another keynote or general session"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>New Session</span>
+                <span>New session</span>
               </button>
             </div>
 
@@ -436,7 +377,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                     : 'text-[#5b6770] hover:text-[#252a2e]'
                 }`}
               >
-                <span>3. Sign Off</span>
+                <span>3. Sign off</span>
               </button>
             </div>
           </div>
@@ -451,9 +392,9 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
               className="bg-[#f0f7fb] border border-[#b9dcf0] rounded p-4 space-y-3"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-[#0063a3] uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-[#0063a3] uppercase tracking-wider">
                   Create Additional Keynote / General Session
-                </h4>
+                </h3>
                 <button
                   type="button"
                   onClick={() => setIsCreatingSession(false)}
@@ -492,12 +433,16 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                   <label className="block text-[11px] font-semibold text-[#252a2e] mb-1">
                     Stage / Room
                   </label>
-                  <input
-                    type="text"
-                    value={newSessionRoom}
-                    onChange={(e) => setNewSessionRoom(e.target.value)}
+                  <RoomField
+                    eventId={event.id}
+                    label="Stage / Room"
+                    name={newSessionRoom}
+                    spaceId={newSessionSpaceId}
+                    onChange={({ name, spaceId }) => {
+                      setNewSessionRoom(name);
+                      setNewSessionSpaceId(spaceId);
+                    }}
                     placeholder="Mainstage Hall A"
-                    className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3 py-1.5 text-xs text-[#252a2e] focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -514,7 +459,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                   type="submit"
                   className="px-3.5 py-1 text-xs font-semibold text-white bg-[#0063a3] rounded shadow-xs"
                 >
-                  Create Session
+                  Create session
                 </button>
               </div>
             </form>
@@ -525,7 +470,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
             <div className="p-4 bg-white border border-[#d8dce0] rounded flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-[#252a2e]">{activeSession.title}</h3>
+                  <h2 className="text-base font-bold text-[#252a2e]">{activeSession.title}</h2>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                       activeSession.currentStage === 'signed_off'
@@ -565,7 +510,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                       className="flex items-center gap-1 text-[#0063a3] hover:underline font-semibold"
                     >
                       <Presentation className="w-3.5 h-3.5" />
-                      <span>Open Master Deck</span>
+                      <span>Open slide deck</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -577,10 +522,9 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                   type="button"
                   onClick={handleStartEditSession}
                   className="focus-ring px-3 py-1.5 rounded text-xs font-semibold text-[#0063a3] hover:text-[#005084] border border-[#b9dcf0] hover:border-[#0063a3] bg-[#e5f2f8] hover:bg-[#d0e8f5] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                  title="Edit session title, date, time window, and location"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                  <span>Edit Details</span>
+                  <span>Edit details</span>
                 </button>
 
                 <button
@@ -603,9 +547,9 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-[#d8dce0]">
                 <div className="flex items-center gap-2">
                   <Edit2 className="w-4 h-4 text-[#0063a3]" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#0063a3]">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#0063a3]">
                     Edit Session Details
-                  </h4>
+                  </h3>
                 </div>
                 <button
                   type="button"
@@ -673,18 +617,22 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                   <label className="block text-[11px] font-semibold text-[#252a2e] mb-1">
                     Stage / Room / Location
                   </label>
-                  <input
-                    type="text"
-                    value={editRoom}
-                    onChange={(e) => setEditRoom(e.target.value)}
+                  <RoomField
+                    eventId={event.id}
+                    label="Stage / Room / Location"
+                    name={editRoom}
+                    spaceId={editSpaceId}
+                    onChange={({ name, spaceId }) => {
+                      setEditRoom(name);
+                      setEditSpaceId(spaceId);
+                    }}
                     placeholder="e.g. Mainstage Hall A"
-                    className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded px-3 py-1.5 text-xs text-[#252a2e] focus:outline-hidden"
                   />
                 </div>
 
                 <div className="lg:col-span-3">
                   <label className="block text-[11px] font-semibold text-[#252a2e] mb-1">
-                    Master Slide Deck URL (Google Slides / PowerPoint Online)
+                    Slide deck link
                   </label>
                   <input
                     type="url"
@@ -708,7 +656,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                   type="submit"
                   className="px-4 py-1.5 text-xs font-semibold text-white bg-[#0063a3] hover:bg-[#005084] rounded shadow-xs transition-colors cursor-pointer"
                 >
-                  Save Changes
+                  Save changes
                 </button>
               </div>
             </form>
@@ -728,10 +676,9 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
           >
             <div className="border border-[#b9dcf0] bg-[#f0f7fb] rounded p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#0063a3] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#fbad26]" />
-                  <span>Stage 1 Tasks: Narrative & Flow Continuity Check</span>
-                </h4>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#0063a3] flex items-center gap-1.5">
+                  <span>Narrative</span>
+                </h3>
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-[#0063a3]">
                   <input
                     type="checkbox"
@@ -754,7 +701,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 {/* 1. Confirm narrative */}
                 <div className="bg-white p-3 rounded border border-[#d8dce0] space-y-1.5">
                   <label className="block text-[11px] font-bold text-[#252a2e]">
-                    1. Overarching Keynote Narrative & Theme:
+                    Theme
                   </label>
                   <textarea
                     rows={2}
@@ -775,7 +722,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 {/* 2. Section Flow & Handover */}
                 <div className="bg-white p-3 rounded border border-[#d8dce0] space-y-1.5">
                   <label className="block text-[11px] font-bold text-[#252a2e]">
-                    2. Section Flow & Handover Connections:
+                    Section flow
                   </label>
                   <textarea
                     rows={2}
@@ -796,7 +743,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 {/* 3. Customer / Client Involvement */}
                 <div className="bg-white p-3 rounded border border-[#d8dce0] space-y-1.5">
                   <label className="block text-[11px] font-bold text-[#252a2e]">
-                    3. Customer & Client Involvement:
+                    Customer involvement
                   </label>
                   <textarea
                     rows={2}
@@ -823,13 +770,6 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
               onAddStakeholder={(newStakeholder) => {
                 setStakeholders((prev) => [newStakeholder, ...prev]);
               }}
-            />
-
-            {/* Structured Markdown Table Export & Human-Friendly Document Preview */}
-            <RunOfShowExportSection
-              session={activeSession}
-              stakeholders={stakeholders}
-              className="mt-4"
             />
           </StageSection>
 
@@ -860,7 +800,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
             {/* Slide Deck URL */}
             <div className="bg-white p-4 rounded border border-[#d8dce0] space-y-2">
               <label className="block text-xs font-bold text-[#252a2e]">
-                Master Presentation Slide Deck URL (Google Slides / PowerPoint Online)
+                Slide deck link
               </label>
               <div className="flex gap-2">
                 <input
@@ -877,7 +817,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                     rel="noreferrer"
                     className="px-3.5 py-1.5 rounded text-xs font-semibold bg-[#0063a3] text-white hover:bg-[#005084] flex items-center gap-1 shrink-0"
                   >
-                    <span>Test Open Deck</span>
+                    <span>Open deck</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
@@ -958,7 +898,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-semibold text-[#5b6770] mb-1">
-                    Video Meeting URL (Google Meet / Teams)
+                    Video meeting link
                   </label>
                   <input
                     type="text"
@@ -1085,9 +1025,43 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
 
             {/* Structured Run of Show Export & Google Docs Document Section */}
             <RunOfShowExportSection
+              eventTitle={event.title}
               session={activeSession}
+              sessions={sessions}
               stakeholders={stakeholders}
+              settings={docSettings.data}
+              onSettingsChange={(patch) => docSettings.commit((prev) => ({ ...prev, ...patch }))}
+              onUpdateSession={handleUpdateActiveSession}
+              openItems={openItems}
+              saveState={docSettings.saveState}
               className="mt-4"
+            />
+          </StageSection>
+
+          {/* ======================================================== */}
+          {/* OPEN ITEMS: printed as the last table of the document    */}
+          {/* ======================================================== */}
+          <StageSection
+            title="Open Items From Review"
+            description="Questions and actions still to close. Open ones print as the last table of the exported document."
+            summary={
+              openItems.filter((t) => t.status === 'open').length > 0
+                ? `${openItems.filter((t) => t.status === 'open').length} open`
+                : 'No open items'
+            }
+            open={openItemsOpen}
+            onToggle={() => setOpenItemsOpen((v) => !v)}
+            icon={<ListChecks className="w-4 h-4 text-[#0063a3]" aria-hidden="true" />}
+          >
+            <TaskList
+              heading="Open items"
+              tasks={openItems}
+              stakeholders={stakeholders}
+              moduleId={KEYNOTE_MODULE_ID}
+              showRaisedBy
+              onAdd={(task) => tasks.commit((prev) => ({ tasks: [...prev.tasks.filter((t) => t.id !== task.id), task] }))}
+              onUpdate={(id, patch) => tasks.commit((prev) => ({ tasks: prev.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }))}
+              onRemove={(id) => tasks.commit((prev) => ({ tasks: prev.tasks.filter((t) => t.id !== id) }))}
             />
           </StageSection>
         </div>
@@ -1100,22 +1074,10 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
             className="focus-ring px-3 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer flex items-center space-x-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Admin Hub</span>
-          </button>
-
-          <span className="text-[11px] text-[#5b6770] hidden sm:inline">
-            3-Stage Keynote Production Workflow &bull; Structured Markdown &amp; Google Docs Export
-          </span>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="focus-ring px-4 py-1.5 rounded text-xs font-semibold bg-[#252a2e] hover:bg-[#1a1d20] text-white transition-colors cursor-pointer"
-          >
-            Close
+            <span>Back to menu</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Delete Session Confirmation Modal (Requires typing DELETE) */}
       {sessionToDelete && (
@@ -1126,7 +1088,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#252a2e]">Delete Keynote Session</h4>
+                <h3 className="text-sm font-bold text-[#252a2e]">Delete Keynote Session</h3>
                 <p className="text-xs text-[#5b6770] mt-1">
                   Are you sure you want to delete <strong className="text-[#252a2e]">&ldquo;{sessionToDelete.title}&rdquo;</strong>?
                 </p>
@@ -1176,7 +1138,7 @@ export const KeynoteSessionModal: React.FC<KeynoteSessionModalProps> = ({
                 }`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Permanently Delete Session</span>
+                <span>Permanently delete session</span>
               </button>
             </div>
           </div>

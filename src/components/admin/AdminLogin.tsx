@@ -29,7 +29,7 @@ export const AdminLogin: React.FC = () => {
     }
     const ok = await sendAdminPasswordReset(email);
     if (ok) {
-      toast.success(`Password reset email sent to ${email}, if that account exists.`, 'Check Your Email');
+      toast.success(`Password reset email sent to ${email}, if that account exists.`);
     } else {
       toast.error('Could not send a reset email right now. Please try again.', 'Failed');
     }
@@ -92,7 +92,7 @@ export const AdminLogin: React.FC = () => {
             className="focus-ring w-full py-2.5 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-sm font-semibold shadow-xs transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-            <span>{isSubmitting ? 'Signing in...' : 'Sign In'}</span>
+            <span>{isSubmitting ? 'Signing in...' : 'Sign in'}</span>
           </button>
 
           <button

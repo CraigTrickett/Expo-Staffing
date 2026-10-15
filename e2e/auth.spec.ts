@@ -22,7 +22,7 @@ test.describe('Admin authentication', () => {
     await page.getByLabel('Password').fill('definitely-the-wrong-password');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.getByText(/Incorrect email or password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Log Out/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Account menu/i })).not.toBeVisible();
   });
 
   test('rejects a real account whose email is not on the admin allowlist', async ({ page }) => {
@@ -46,7 +46,8 @@ test.describe('Admin authentication', () => {
   test('logging out returns to the login form, and hides admin-only controls', async ({ page }) => {
     await page.goto('/#/');
     await loginAsAdmin(page);
-    await page.getByRole('button', { name: /Log Out/i }).click();
+    await page.getByRole('button', { name: /Account menu/i }).click();
+    await page.getByRole('menuitem', { name: /Log out/i }).click();
     // Logging out from the wizard page should show the login form again,
     // not silently leave stale admin content visible.
     await expect(page.getByRole('heading', { name: 'Admin Sign In' })).toBeVisible();

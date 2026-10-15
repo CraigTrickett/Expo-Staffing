@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeCsvField, generateScheduleCsv } from './csv';
+import { escapeCsvField, generateScheduleCsv, neutraliseFormula } from './csv';
 import type { EventConfig, TimeSlot, ShiftBooking } from '@/types';
 
 describe('escapeCsvField', () => {
@@ -131,5 +131,35 @@ describe('generateScheduleCsv', () => {
   it('produces an empty-but-valid CSV (header only) for an event with no slots yet', () => {
     const csv = generateScheduleCsv(baseConfig(), []);
     expect(csv.split('\r\n')).toHaveLength(1);
+  });
+});
+
+
+describe('spreadsheet formulas', () => {
+  it('prefixes anything a spreadsheet would run as a formula', () => {
+    for (const v of ['=1+1', '+SUM(A1)', '-2+3', '@HYPERLINK("http://evil")', '\t=cmd', '\r=x']) expect(neutraliseFormula(v)).toBe(`'${v}`);
+  });
+  it('leaves ordinary text and later characters alone', () => {
+    for (const v of ['Jane Doe', 'a=b', 'x@y.com', '', ' =leading space']) expect(neutraliseFormula(v)).toBe(v);
+  });
+
+  const cfg = { title: 'T' } as EventConfig;
+  const slotWith = (names: string[], emails: string[] = []): TimeSlot =>
+    ({
+      id: 's', date: '2026-11-09', startTime: '09:00', endTime: '10:00', capacity: 2, isFull: false,
+      bookings: names.map((n, i) => ({ id: `b${i}`, slotId: 's', staffId: `p${i}`, staffName: n, staffEmail: emails[i] ?? '', bookedAt: '' })) as ShiftBooking[],
+    }) as TimeSlot;
+  const row = (slot: TimeSlot) => generateScheduleCsv(cfg, [slot]).split('\n')[1];
+
+  it('a staff name that is a formula is written as text, in the exported file', () => {
+    expect(row(slotWith(['=1+1']))).toContain("'=1+1");
+    expect(row(slotWith(['@HYPERLINK("http://evil")']))).toContain("\"'@HYPERLINK(\"\"http://evil\"\")\"");
+  });
+  it('an email that is a formula is written as text too', () => {
+    expect(row(slotWith(['Ann'], ['=cmd|calc']))).toContain("'=cmd|calc");
+  });
+  it('numbers such as capacity are untouched, and ordinary rows are unchanged', () => {
+    const r = row(slotWith(['Ann Lee'], ['ann@x.com']));
+    expect(r).toBe('2026-11-09,Mon,9:00 AM,10:00 AM,2,1,Partially Staffed,Ann Lee,ann@x.com');
   });
 });

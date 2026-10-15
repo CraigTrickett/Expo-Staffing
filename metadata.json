@@ -1,6 +1,6 @@
 {
-  "name": "Expo Staffing",
-  "description": "Conference and expo booth scheduling application: staff join and claim shifts via a shared link with zero signups, admin access requires sign-in. Built with the Trimble Modus design system.",
+  "name": "Showrunner",
+  "description": "Showrunner: run a conference or expo end to end. Booth staffing, key stakeholders, the run of show, budget and schedule. Staff claim shifts through a shared link with no signup; admin access requires sign-in. Built with the Trimble Modus design system.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

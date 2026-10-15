@@ -76,7 +76,7 @@ test.describe('Cross-device sync', () => {
     await secondAdminPage.goto(`/#/admin/${adminKey}`);
     await expect(secondAdminPage.getByText(title)).toBeVisible();
 
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     page.once('dialog', (dialog) => dialog.accept());
     await page.locator('div', { hasText: title }).getByTitle('Permanently delete this event').click();
 

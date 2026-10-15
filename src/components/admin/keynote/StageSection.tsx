@@ -38,7 +38,7 @@ export const StageSection: React.FC<StageSectionProps> = ({
   const bodyId = `${uid}-body`;
 
   return (
-    <section className="rounded border border-[#d8dce0] bg-white shadow-2xs" aria-labelledby={headingId}>
+    <div className="rounded border border-[#d8dce0] bg-white shadow-2xs">
       <div className="flex items-center gap-3 p-3 sm:px-4">
         <button
           type="button"
@@ -87,6 +87,6 @@ export const StageSection: React.FC<StageSectionProps> = ({
           <div className="space-y-4 border-t border-[#e7eaef] bg-[#f8f9fa] p-3 sm:p-4">{children}</div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };

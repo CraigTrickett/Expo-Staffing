@@ -1,215 +1,103 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { CreateEventWizard } from '@/components/wizard/CreateEventWizard';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { AdminLogin } from '@/components/admin/AdminLogin';
-import { StaffShiftPicker } from '@/components/staff/StaffShiftPicker';
-import { MyEventsPanel } from '@/components/common/MyEventsPanel';
 import { DatabaseRequiredScreen } from '@/components/common/DatabaseRequiredScreen';
-import { isFirebaseConfigured, subscribeToAdminAuth, signOutAdmin } from '@/lib/firebase';
-import { useEventStore } from '@/store/useEventStore';
-import type { EventConfig } from '@/types';
-import { History, Loader2, Shield } from 'lucide-react';
-import { useModalA11y } from '@/lib/hooks';
+import { NotFoundPage } from '@/components/common/NotFoundPage';
+import { PageSpinner } from '@/components/common/PageSpinner';
+import { AccessCheckFailed } from '@/components/common/AccessCheckFailed';
+import { ensurePublicLinks, isFirebaseConfigured, retryAdminCheck, subscribeToAdminAuth, signOutAdmin } from '@/lib/firebase';
+import type { AdminAuthStatus } from '@/lib/firebase';
+import { hrefs, isAdminOnlyRoute, parseRoute } from '@/lib/route';
+import type { Route } from '@/lib/route';
 
-type RouteState =
-  | { name: 'wizard' }
-  | { name: 'admin'; adminKey: string }
-  | { name: 'staff'; publicKey: string };
-
-function parseHashRoute(): RouteState {
-  const hash = window.location.hash || '';
-
-  if (hash.startsWith('#/admin/')) {
-    const adminKey = hash.replace('#/admin/', '').trim();
-    return { name: 'admin', adminKey };
-  }
-
-  if (hash.startsWith('#/event/')) {
-    const publicKey = hash.replace('#/event/', '').trim();
-    return { name: 'staff', publicKey };
-  }
-
-  return { name: 'wizard' };
-}
+// Pages load when they are first visited, so the staff page, for example, does not carry the admin screens.
+const HubPage = lazy(() => import('@/components/home/HubPage').then((m) => ({ default: m.HubPage })));
+const EventsPage = lazy(() => import('@/components/home/EventsPage').then((m) => ({ default: m.EventsPage })));
+const ModulePage = lazy(() => import('@/components/admin/ModulePage').then((m) => ({ default: m.ModulePage })));
+const UserManagerPage = lazy(() => import('@/components/admin/UserManagerPage').then((m) => ({ default: m.UserManagerPage })));
+const CreateEventWizard = lazy(() => import('@/components/wizard/CreateEventWizard').then((m) => ({ default: m.CreateEventWizard })));
+const AdminDashboard = lazy(() => import('@/components/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const StaffShiftPicker = lazy(() => import('@/components/staff/StaffShiftPicker').then((m) => ({ default: m.StaffShiftPicker })));
 
 export default function App() {
-  const [route, setRoute] = useState<RouteState>(parseHashRoute());
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
-  const { currentEvent } = useEventStore();
-
-  // Selected event for opening the Admin Hub directly (e.g. from Menu button)
-  const [selectedHubEvent, setSelectedHubEvent] = useState<EventConfig | null>(null);
-
-  // When first accessing the site (no specific event deep link), open the Events modal by default
-  const [showAllEvents, setShowAllEvents] = useState<boolean>(() => {
-    const hash = window.location.hash || '';
-    return !hash.startsWith('#/admin/') && !hash.startsWith('#/event/');
-  });
+  const [authStatus, setAuthStatus] = useState<AdminAuthStatus>('signed_out');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const nextRoute = parseHashRoute();
-      setRoute(nextRoute);
-    };
-
+    const handleHashChange = () => setRoute(parseRoute(window.location.hash));
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAdminAuth((email) => {
+    const unsubscribe = subscribeToAdminAuth((email, status) => {
       setAdminEmail(email);
+      setAuthStatus(status);
       setAuthReady(true);
     });
     return () => unsubscribe?.();
   }, []);
 
-  const handleOpenMenu = () => {
-    if (currentEvent) {
-      setSelectedHubEvent(currentEvent);
-    } else {
-      setSelectedHubEvent(null);
-    }
-    setShowAllEvents(true);
-  };
-
-  const handleOpenEvents = () => {
-    setSelectedHubEvent(null);
-    setShowAllEvents(true);
-  };
+  // Staff open an event through a lookup entry that is created with the event. Events made before that
+  // existed get theirs the first time an admin signs in, so their staff links keep working.
+  useEffect(() => {
+    if (adminEmail) void ensurePublicLinks();
+  }, [adminEmail]);
 
   if (!isFirebaseConfigured) {
     return <DatabaseRequiredScreen />;
   }
 
+  // The menu, its pages and the create page are for signed-in admins. The staff page is open to anyone with its link.
+  const needsAdmin = isAdminOnlyRoute(route);
+
   return (
-    <Layout
-      currentRoute={route.name}
-      isAdminAuthenticated={Boolean(adminEmail)}
-      onOpenAllEvents={handleOpenEvents}
-      onOpenMenu={handleOpenMenu}
-    >
-      {route.name === 'wizard' && (
-        <div className="space-y-6">
-          <div className="max-w-3xl mx-auto px-4 pt-6 flex items-center justify-between text-xs text-[#46535e]">
-            {adminEmail ? (
-              <span>
-                Signed in as <span className="font-semibold text-[#252a2e]">{adminEmail}</span>
-              </span>
-            ) : (
-              <span className="text-[#5b6770]">
-                Expo Staffing Workspace
-              </span>
+    <Layout currentRoute={route.name} isAdminAuthenticated={Boolean(adminEmail)} adminEmail={adminEmail} onSignOut={() => signOutAdmin()}>
+      {(needsAdmin || route.name === 'admin') && !authReady && <PageSpinner />}
+
+      {/* Signed in, but access could not be checked: say so, rather than showing a sign-in form they have already used. */}
+      {(needsAdmin || route.name === 'admin') && authReady && !adminEmail && authStatus === 'error' && <AccessCheckFailed onRetry={retryAdminCheck} />}
+
+      {(needsAdmin || route.name === 'admin') && authReady && !adminEmail && authStatus !== 'error' && <AdminLogin />}
+
+      <Suspense fallback={<PageSpinner />}>
+        {needsAdmin && authReady && adminEmail && (
+          <>
+            {route.name === 'home' && <HubPage />}
+            {route.name === 'hub' && <HubPage eventId={route.eventId} />}
+            {route.name === 'module' && <ModulePage eventId={route.eventId} moduleId={route.moduleId} />}
+            {route.name === 'users' && <UserManagerPage currentEmail={adminEmail} />}
+            {route.name === 'events' && <EventsPage />}
+            {route.name === 'new' && (
+              <div className="space-y-6">
+                <div className="max-w-3xl mx-auto px-4 pt-6 text-xs">
+                  <a
+                    href={hrefs.home}
+                    className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 -ml-2.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] hover:bg-[#e5f2f8] transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to menu</span>
+                  </a>
+                </div>
+                <CreateEventWizard
+                  onEventCreated={(adminKey) => {
+                    window.location.hash = hrefs.admin(adminKey);
+                  }}
+                />
+              </div>
             )}
+          </>
+        )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleOpenEvents}
-                className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer shadow-2xs"
-              >
-                <History className="w-3.5 h-3.5" />
-                <span>Events</span>
-              </button>
+        {route.name === 'admin' && authReady && adminEmail && <AdminDashboard adminKey={route.adminKey} />}
 
-              {adminEmail ? (
-                <button
-                  type="button"
-                  onClick={() => signOutAdmin()}
-                  className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#da3832] border border-[#d8dce0] hover:border-[#f5b5b3] bg-white transition-colors cursor-pointer shadow-2xs"
-                >
-                  <span>Log Out</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAdminLoginModal(true)}
-                  className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#0063a3] hover:text-[#005084] border border-[#b9dcf0] hover:border-[#0063a3] bg-[#e5f2f8] transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Admin Sign In</span>
-                </button>
-              )}
-            </div>
-          </div>
+        {route.name === 'staff' && <StaffShiftPicker publicKey={route.publicKey} />}
+      </Suspense>
 
-          {!authReady ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-6 h-6 animate-spin text-[#0063a3]" />
-            </div>
-          ) : (
-            <CreateEventWizard
-              onEventCreated={(adminKey) => {
-                window.location.hash = `#/admin/${adminKey}`;
-              }}
-            />
-          )}
-
-          {showAdminLoginModal && <AdminLoginDialog onClose={() => setShowAdminLoginModal(false)} />}
-        </div>
-      )}
-
-      {route.name === 'admin' && (
-        <>
-          {!authReady ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-6 h-6 animate-spin text-[#0063a3]" />
-            </div>
-          ) : adminEmail ? (
-            <AdminDashboard adminKey={route.adminKey} adminEmail={adminEmail} />
-          ) : (
-            <AdminLogin />
-          )}
-        </>
-      )}
-
-      {route.name === 'staff' && (
-        <StaffShiftPicker publicKey={route.publicKey} />
-      )}
-
-      {/* Global Events & Admin Hub Modal Flow */}
-      {showAllEvents && (
-        <MyEventsPanel
-          initialEventForHub={selectedHubEvent}
-          onClose={() => {
-            setShowAllEvents(false);
-            setSelectedHubEvent(null);
-          }}
-          onCreateNew={() => {
-            setShowAllEvents(false);
-            setSelectedHubEvent(null);
-          }}
-        />
-      )}
+      {route.name === 'notfound' && <NotFoundPage />}
     </Layout>
-  );
-}
-
-function AdminLoginDialog({ onClose }: { onClose: () => void }) {
-  const dialogRef = useModalA11y(true, onClose);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#252a2e]/60 backdrop-blur-xs modal-scrim">
-      <div
-        ref={dialogRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Admin sign in"
-        className="modal-panel relative w-full max-w-sm focus:outline-hidden"
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="focus-ring absolute right-3 top-3 z-10 p-1 rounded-full text-[#5b6770] hover:text-[#252a2e] hover:bg-[#f1f3f6] cursor-pointer"
-          aria-label="Close"
-        >
-          &times;
-        </button>
-        <AdminLogin />
-      </div>
-    </div>
   );
 }

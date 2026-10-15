@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from '@/components/common/Toast';
 import { cn } from '@/lib/utils';
+import { formatMoneyInput, parseMoney } from '@/lib/budget';
 
 /**
  * Cells that read as plain text until you reach for them. Hover shows an edge,
@@ -16,12 +17,15 @@ export const inlineFieldClass =
 
 interface InlineTextProps {
   value: string;
-  onCommit: (next: string) => void;
+  /** Return false to refuse the value: the field then goes back to what it was. */
+  onCommit: (next: string) => void | boolean;
   label: string;
   placeholder?: string;
   required?: boolean;
   requiredMessage?: string;
   semibold?: boolean;
+  /** Enter adds a new line; Ctrl or Cmd with Enter saves. Whitespace and line breaks are kept. */
+  multiline?: boolean;
   className?: string;
 }
 
@@ -33,6 +37,7 @@ export const InlineText: React.FC<InlineTextProps> = ({
   required,
   requiredMessage,
   semibold,
+  multiline,
   className = '',
 }) => {
   const [draft, setDraft] = useState(value);
@@ -59,14 +64,14 @@ export const InlineText: React.FC<InlineTextProps> = ({
       setDraft(value);
       return;
     }
-    const next = draft.replace(/\s+/g, ' ').trim();
+    const next = multiline ? draft.trim() : draft.replace(/\s+/g, ' ').trim();
     if (required && !next) {
       setDraft(value);
       toast.error(requiredMessage || `${label} can't be empty.`, 'Not saved');
       return;
     }
     setDraft(next);
-    if (next !== value) onCommit(next);
+    if (next !== value && onCommit(next) === false) setDraft(value);
   };
 
   return (
@@ -83,7 +88,7 @@ export const InlineText: React.FC<InlineTextProps> = ({
       onChange={(e) => setDraft(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+        if (e.key === 'Enter' && !e.nativeEvent.isComposing && (!multiline || e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           e.currentTarget.blur();
         } else if (e.key === 'Escape' && draft !== value) {
@@ -176,6 +181,96 @@ export const InlineNumber: React.FC<InlineNumberProps> = ({
       className={cn(
         inlineFieldClass,
         'w-14 text-right font-mono tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+        className
+      )}
+    />
+  );
+};
+
+interface InlineMoneyProps {
+  value: number | undefined;
+  /** Receives the new amount, or undefined when an optional field is cleared. */
+  onCommit: (next: number | undefined) => void;
+  label: string;
+  /** Optional fields may be left empty. Required ones put the old value back. */
+  optional?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+}
+
+/** An amount that reads like text until focused. Commits on blur or Enter; Escape reverts. */
+export const InlineMoney: React.FC<InlineMoneyProps> = ({
+  value,
+  onCommit,
+  label,
+  optional,
+  disabled,
+  placeholder,
+  className = '',
+}) => {
+  const [draft, setDraft] = useState(formatMoneyInput(value));
+  const focused = useRef(false);
+  const cancelled = useRef(false);
+
+  useEffect(() => {
+    if (!focused.current) setDraft(formatMoneyInput(value));
+  }, [value]);
+
+  const handleBlur = () => {
+    focused.current = false;
+    if (cancelled.current) {
+      cancelled.current = false;
+      setDraft(formatMoneyInput(value));
+      return;
+    }
+    const text = draft.trim();
+    if (text === '') {
+      if (optional) {
+        if (value !== undefined) onCommit(undefined);
+      } else {
+        setDraft(formatMoneyInput(value));
+        toast.error(`${label} needs an amount.`, 'Not saved');
+      }
+      return;
+    }
+    const parsed = parseMoney(text);
+    if (parsed === null) {
+      setDraft(formatMoneyInput(value));
+      toast.error('Enter an amount such as 1,250.50.', 'Not saved');
+      return;
+    }
+    setDraft(formatMoneyInput(parsed));
+    if (parsed !== value) onCommit(parsed);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      disabled={disabled}
+      aria-label={label}
+      placeholder={placeholder}
+      onFocus={(e) => {
+        focused.current = true;
+        e.currentTarget.select();
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        } else if (e.key === 'Escape' && draft !== formatMoneyInput(value)) {
+          e.stopPropagation();
+          cancelled.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      className={cn(
+        inlineFieldClass,
+        'text-right font-mono tabular-nums disabled:cursor-default disabled:text-[#46535e] disabled:hover:border-transparent disabled:hover:bg-transparent',
         className
       )}
     />

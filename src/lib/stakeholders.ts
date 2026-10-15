@@ -1,8 +1,11 @@
 import type { KeyStakeholder, StaffMember } from '@/types';
 import { generateNanoKey } from './utils';
 import { storage } from './storage';
+import { readModuleLocal, saveModule, seedModuleLocal } from './moduleStore';
 
-const STAKEHOLDERS_STORAGE_PREFIX = 'boothduty_stakeholders_';
+/** Where earlier versions kept stakeholders: this device only. Read once, to move them to shared storage. */
+const LEGACY_STAKEHOLDERS_PREFIX = 'boothduty_stakeholders_';
+export const STAKEHOLDERS_MODULE_ID = 'stakeholders';
 
 export const INVOLVED_AREAS_OPTIONS = [
   'Keynote / General Session',
@@ -12,10 +15,20 @@ export const INVOLVED_AREAS_OPTIONS = [
   'Social Event',
   'Sponsorship',
   'Swag',
-  'Session Scheduling',
+  'Schedule',
   'Resources',
   'Budget',
 ];
+
+/** Area names that have been renamed. Stored stakeholders may still carry the old value. */
+const LEGACY_AREA_NAMES: Record<string, string> = {
+  'Session Scheduling': 'Schedule',
+};
+
+export function normaliseInvolvedAreas(areas: string[] = []): string[] {
+  const mapped = areas.map((a) => LEGACY_AREA_NAMES[a] ?? a);
+  return mapped.filter((a, i) => mapped.indexOf(a) === i);
+}
 
 export const TEAMS_OPTIONS = [
   'Executive Leadership',
@@ -29,23 +42,46 @@ export const TEAMS_OPTIONS = [
   'Creative & Brand',
 ];
 
+const asStakeholders = (raw: unknown): KeyStakeholder[] =>
+  (Array.isArray(raw) ? raw : []).filter(
+    (x): x is KeyStakeholder => typeof x === 'object' && x !== null && typeof (x as KeyStakeholder).id === 'string'
+  );
+
+function readLegacyStakeholders(eventId: string): KeyStakeholder[] {
+  try {
+    const raw = localStorage.getItem(`${LEGACY_STAKEHOLDERS_PREFIX}${eventId}`);
+    if (raw) {
+      const found = asStakeholders(JSON.parse(raw));
+      if (found.length > 0) return found;
+    }
+  } catch {
+    /* unreadable: treat as nothing to migrate */
+  }
+  return asStakeholders(storage.getById(eventId)?.stakeholders);
+}
+
+/**
+ * The event's key stakeholders, shared between admins and devices through the module store: the copy
+ * read here is the latest one brought in (see syncModules). A new event starts with only its booth
+ * staff who gave an email, and nobody invented.
+ */
 export function getStakeholders(eventId: string, fallbackRoster?: StaffMember[]): KeyStakeholder[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(`${STAKEHOLDERS_STORAGE_PREFIX}${eventId}`);
-    let list: KeyStakeholder[] = [];
-    if (raw) {
-      list = JSON.parse(raw);
+    const shared = readModuleLocal<unknown>(eventId, STAKEHOLDERS_MODULE_ID);
+    let list: KeyStakeholder[];
+    if (shared) {
+      list = asStakeholders(shared.data);
     } else {
-      // Check stored event
-      const stored = storage.getById(eventId);
-      if (stored?.stakeholders && stored.stakeholders.length > 0) {
-        list = stored.stakeholders;
-      } else {
-        list = createDefaultStakeholders(eventId, fallbackRoster || stored?.roster || []);
-      }
-      localStorage.setItem(`${STAKEHOLDERS_STORAGE_PREFIX}${eventId}`, JSON.stringify(list));
+      // Earlier versions kept these on this device only. Move them across, once.
+      const legacy = readLegacyStakeholders(eventId);
+      list = legacy.length > 0 ? legacy : mergeRosterIntoStakeholders(eventId, [], fallbackRoster || storage.getById(eventId)?.roster || []);
+      // Kept so the people derived from the roster keep the same ids from one read to the next. Stamped
+      // with no time (seedModuleLocal), so a shared copy that already exists is never overwritten by a read.
+      if (list.length > 0) seedModuleLocal(eventId, STAKEHOLDERS_MODULE_ID, list);
     }
+
+    list = list.map((s) => ({ ...s, involvedWith: normaliseInvolvedAreas(s.involvedWith) }));
 
     // Ensure any new members from roster are merged in seamlessly
     if (fallbackRoster && fallbackRoster.length > 0) {
@@ -61,17 +97,8 @@ export function getStakeholders(eventId: string, fallbackRoster?: StaffMember[])
 
 export function saveStakeholders(eventId: string, list: KeyStakeholder[]): void {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`${STAKEHOLDERS_STORAGE_PREFIX}${eventId}`, JSON.stringify(list));
-    // Also save in event document if available
-    const stored = storage.getById(eventId);
-    if (stored) {
-      stored.stakeholders = list;
-      storage.saveEvent(stored);
-    }
-  } catch (err) {
-    console.warn('[stakeholders] Failed to save stakeholders:', err);
-  }
+  // The working copy is written at once, and the shared copy follows in the background.
+  void saveModule(eventId, STAKEHOLDERS_MODULE_ID, list);
 }
 
 export function addStakeholder(
@@ -180,8 +207,9 @@ function mergeRosterIntoStakeholders(
   return existingStakeholders;
 }
 
-function createDefaultStakeholders(eventId: string, roster: StaffMember[]): KeyStakeholder[] {
-  const defaults: KeyStakeholder[] = [
+/** Made-up people for trying the module out. Never added unless asked for. */
+export function createSampleStakeholders(eventId: string): KeyStakeholder[] {
+  return [
     {
       id: `stk_sarah_chen`,
       eventId,
@@ -201,7 +229,7 @@ function createDefaultStakeholders(eventId: string, roster: StaffMember[]): KeyS
       lastName: 'Vance',
       email: 'marcus.vance@saasdisrupt.io',
       team: 'Developer Advocacy',
-      involvedWith: ['Keynote / General Session', 'Expo Booths', 'Session Scheduling'],
+      involvedWith: ['Keynote / General Session', 'Expo Booths', 'Schedule'],
       phone: '+1 (415) 555-0143',
       notes: 'Live developer spatial AI demo in Keynote; lead booth demonstrator.',
       createdAt: new Date().toISOString(),
@@ -229,6 +257,13 @@ function createDefaultStakeholders(eventId: string, roster: StaffMember[]): KeyS
       createdAt: new Date().toISOString(),
     },
   ];
+}
 
-  return mergeRosterIntoStakeholders(eventId, defaults, roster);
+/** Adds the sample people not already listed, and returns everyone. */
+export function addSampleStakeholders(eventId: string): KeyStakeholder[] {
+  const current = getStakeholders(eventId);
+  const have = new Set(current.map((s) => s.email.toLowerCase()));
+  const merged = [...current, ...createSampleStakeholders(eventId).filter((s) => !have.has(s.email.toLowerCase()))];
+  saveStakeholders(eventId, merged);
+  return merged;
 }

@@ -23,8 +23,8 @@ export function requireAdminCredentials() {
 
 /**
  * Logs in as the admin test account from whichever page currently shows
- * the login form (the wizard page and any #/admin/:key route both do,
- * when not authenticated).
+ * the login form. Every admin page does when not authenticated: the menu (#/),
+ * the create page (#/new) and the expo floor (#/admin/:key).
  */
 export async function loginAsAdmin(page: Page) {
   requireAdminCredentials();
@@ -34,17 +34,26 @@ export async function loginAsAdmin(page: Page) {
   await page.getByRole('button', { name: 'Sign In' }).click();
   // Successful login replaces the login form with real admin content —
   // wait for something that only renders once authenticated.
-  await expect(page.getByRole('button', { name: /Log Out/i })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('button', { name: /Account menu/i })).toBeVisible({ timeout: 10_000 });
+}
+
+/** Signs out through the profile menu at the right of the header. */
+export async function logOut(page: Page) {
+  await page.getByRole('button', { name: /Account menu/i }).click();
+  await page.getByRole('menuitem', { name: /Log out/i }).click();
 }
 
 /**
- * Creates a brand-new event through the wizard (must already be on the
- * wizard page and logged in) and returns the admin key it navigates to.
+ * Creates a brand-new event through the wizard (must already be logged in)
+ * and returns the admin key it navigates to. The wizard is at #/new: it is
+ * not the first page, so this goes there itself.
  */
 export async function createEventThroughWizard(
   page: Page,
   opts: { title: string; rosterNames?: string[] }
 ): Promise<string> {
+  await page.goto('/#/new');
+  await expect(page.getByRole('heading', { name: 'Create Expo Schedule' })).toBeVisible();
   await page.getByLabel(/Event & Booth Name/i).fill(opts.title);
   if (opts.rosterNames?.length) {
     await page.getByPlaceholder(/Paste staff names/i).fill(opts.rosterNames.join('\n'));

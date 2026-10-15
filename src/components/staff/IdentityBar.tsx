@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  Clock,
-  Plus,
-  Sparkles,
-  User,
-  UserCheck,
-  UserPlus,
-  Users,
-  X,
-} from 'lucide-react';
+import { CheckCircle2, ChevronDown, Plus, User, UserPlus, X } from 'lucide-react';
 import type { StaffMember } from '@/types';
 import { useModalA11y } from '@/lib/hooks';
 import { cn, roundTargetHoursForDisplay } from '@/lib/utils';
@@ -91,9 +79,6 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   <h2 className="text-sm font-bold text-[#252a2e] tracking-tight">
                     Who is claiming shifts?
                   </h2>
-                  <p className="text-xs text-[#46535e]">
-                    Select your name from the team roster or add yourself in 1 click.
-                  </p>
                 </div>
               </div>
 
@@ -104,14 +89,14 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                     onClick={() => setIsOpen(!isOpen)}
                     className="px-4 py-2 bg-white hover:bg-[#f1f3f6] border border-[#d8dce0] text-[#252a2e] rounded text-xs font-semibold flex items-center space-x-2 transition-colors shadow-xs cursor-pointer"
                   >
-                    <span>Choose Your Name</span>
+                    <span>Choose your name</span>
                     <ChevronDown className="w-3.5 h-3.5 text-[#7c878e]" />
                   </button>
 
                   {isOpen && (
                     <div className="absolute right-0 mt-2 w-64 bg-white border border-[#d8dce0] rounded shadow-modus-3 py-2 z-50 max-h-72 overflow-y-auto">
                       <div className="px-3 py-1.5 text-[10px] font-bold text-[#46535e] uppercase tracking-wider">
-                        Expo Staffing Roster ({roster.length})
+                        Showrunner Roster ({roster.length})
                       </div>
                       {roster.map((member) => (
                         <button
@@ -142,7 +127,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                           className="w-full text-left px-3 py-2 text-xs text-[#0063a3] hover:bg-[#e5f2f8] font-semibold flex items-center space-x-2 cursor-pointer"
                         >
                           <UserPlus className="w-3.5 h-3.5" />
-                          <span>I'm not on this list (+ Add My Name)</span>
+                          <span>I'm not on this list (+ add my name)</span>
                         </button>
                       </div>
                     </div>
@@ -155,7 +140,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   className="px-3.5 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add My Name</span>
+                  <span>+ Add my name</span>
                 </button>
               </div>
             </div>
@@ -221,7 +206,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                   onClick={() => setIsOpen(!isOpen)}
                   className="px-3 py-1.5 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
-                  Switch Identity
+                  Switch identity
                 </button>
 
                 {isOpen && (
@@ -263,7 +248,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
                         className="w-full text-left px-3 py-2 text-xs text-[#0063a3] hover:bg-[#e5f2f8] font-semibold flex items-center space-x-2 cursor-pointer"
                       >
                         <UserPlus className="w-3.5 h-3.5" />
-                        <span>+ Add New Team Member</span>
+                        <span>+ Add team member</span>
                       </button>
                     </div>
                   </div>
@@ -286,10 +271,7 @@ export const IdentityBar: React.FC<IdentityBarProps> = ({
           >
             <div className="flex items-start justify-between border-b border-[#d8dce0] pb-3">
               <div>
-                <h3 className="text-base font-bold text-[#252a2e]">Join Expo Staffing Roster</h3>
-                <p className="text-xs text-[#46535e]">
-                  Enter your information to sign up for exhibition shifts.
-                </p>
+                <h3 className="text-base font-bold text-[#252a2e]">Join Showrunner Roster</h3>
               </div>
               <button
                 type="button"

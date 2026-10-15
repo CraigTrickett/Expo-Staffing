@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   query,
   collection,
   where,
@@ -27,9 +28,14 @@ import type { EventConfig, ShiftBooking, StoredEventData, TimeSlot, StaffMember,
 import { parseTimeToMinutes, updateSlotDerivedState } from './matrix';
 
 const COLLECTION = 'boothEvents';
+const PUBLIC_LINKS = 'publicLinks';
 
 /**
- * Only these two accounts are permitted admin access. Firebase Auth would
+ * The owners: always admins, and never revokable. Other admins are granted through
+ * the user manager and stored in the adminUsers collection (see hasAdminAccess).
+ * Kept in step with OWNER_EMAILS in functions/adminUsers.js and firestore.rules.
+ *
+ * Originally: only these two accounts were permitted admin access. Firebase Auth would
  * happily authenticate anyone who has a valid account, so this allowlist
  * is what actually restricts who "the admin" can be — enforced here on
  * sign-in, and again server-side in every Cloud Function that performs a
@@ -38,7 +44,7 @@ const COLLECTION = 'boothEvents';
 export const ALLOWED_ADMIN_EMAILS = ['craig_trickett@trimble.com', 'craigtrickett@gmail.com'];
 
 // Read optional Firebase environment credentials
-const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
+const env: Record<string, string | undefined> = import.meta.env ?? {};
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -141,6 +147,54 @@ function getAuthClient(): Auth | null {
   return authClient;
 }
 
+export function isOwnerEmail(email: string): boolean {
+  const lower = (email || '').trim().toLowerCase();
+  return ALLOWED_ADMIN_EMAILS.some((e) => e.toLowerCase() === lower);
+}
+
+/**
+ * Whether this email is an admin: an owner, or someone granted access through the
+ * user manager. Granted admins have a document in adminUsers, which a signed-in
+ * person may read for their own email only. This is a convenience for the interface;
+ * the Cloud Functions and Firestore rules make the same check for real.
+ */
+export type AdminCheck = 'admin' | 'not_admin' | 'error';
+
+/** How many more times to try the access check, and how long to wait between tries, when it cannot be read. */
+export const ADMIN_CHECK_RETRIES = 2;
+export const ADMIN_CHECK_DELAY_MS = 600;
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Whether this email may use the admin side. The owners always can. Anyone else has a document in
+ * adminUsers. A failed read is its own answer, 'error', and is not the same as "no": telling a granted
+ * admin they are not one because their connection dropped would be wrong, so it is retried first.
+ */
+export async function checkAdminAccess(email: string): Promise<AdminCheck> {
+  const lower = (email || '').trim().toLowerCase();
+  if (!lower) return 'not_admin';
+  if (isOwnerEmail(lower)) return 'admin';
+  const db = getDb();
+  if (!db) return 'not_admin';
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const snap = await getDoc(doc(db, 'adminUsers', lower));
+      return snap.exists() ? 'admin' : 'not_admin';
+    } catch (err) {
+      if (attempt >= ADMIN_CHECK_RETRIES) {
+        console.warn('[Firebase] Could not check admin access:', err);
+        return 'error';
+      }
+      await wait(ADMIN_CHECK_DELAY_MS * (attempt + 1));
+    }
+  }
+}
+
+export async function hasAdminAccess(email: string): Promise<boolean> {
+  return (await checkAdminAccess(email)) === 'admin';
+}
+
 /**
  * Signs in with email/password, then enforces the admin allowlist: if the
  * account authenticates successfully but its email isn't one of the two
@@ -157,7 +211,12 @@ export async function signInAdmin(email: string, password: string): Promise<{ ok
   try {
     const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
     const signedInEmail = (credential.user.email || '').toLowerCase();
-    if (!ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(signedInEmail)) {
+    const access = await checkAdminAccess(signedInEmail);
+    if (access === 'error') {
+      await signOut(auth);
+      return { ok: false, error: 'Could not check your access. Check your connection and try again.' };
+    }
+    if (access !== 'admin') {
       await signOut(auth);
       return { ok: false, error: 'This account is not authorized for admin access.' };
     }
@@ -204,22 +263,91 @@ export async function sendAdminPasswordReset(email: string): Promise<boolean> {
  * back out immediately, but could if a session persisted from before an
  * allowlist change) is reported as signed out, not as a valid admin.
  */
-export function subscribeToAdminAuth(callback: (email: string | null) => void): Unsubscribe | null {
+/** What the sign-in state is: nobody, an admin, someone who is not an admin, or someone whose access could not be checked. */
+export type AdminAuthStatus = 'signed_out' | 'admin' | 'not_admin' | 'error';
+
+let rerunAdminCheck: (() => void) | null = null;
+
+/** Tries the access check again, after it failed. Does nothing if nobody is signed in. */
+export function retryAdminCheck(): void {
+  rerunAdminCheck?.();
+}
+
+export function subscribeToAdminAuth(callback: (email: string | null, status: AdminAuthStatus) => void): Unsubscribe | null {
   const auth = getAuthClient();
   if (!auth) {
-    callback(null);
+    callback(null, 'signed_out');
     return null;
   }
 
-  return onAuthStateChanged(auth, (user) => {
-    const email = (user?.email || '').toLowerCase();
-    if (user && ALLOWED_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email)) {
-      callback(user.email);
-    } else {
-      callback(null);
+  // Checking a granted admin takes a read, so results can arrive out of order if the
+  // auth state changes quickly. Only the latest check is allowed to report.
+  let latest = 0;
+  const run = (email: string) => {
+    const check = ++latest;
+    checkAdminAccess(email).then((access) => {
+      if (check !== latest) return;
+      callback(access === 'admin' ? email : null, access === 'admin' ? 'admin' : access);
+    });
+  };
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!user?.email) {
+      latest += 1;
+      rerunAdminCheck = null;
+      callback(null, 'signed_out');
+      return;
     }
+    const email = user.email;
+    rerunAdminCheck = () => run(email);
+    run(email);
   });
+  return () => {
+    rerunAdminCheck = null;
+    unsubscribe();
+  };
 }
+
+export interface AdminUserRecord {
+  email: string;
+  addedBy: string;
+  addedAt: string;
+}
+
+export interface AdminUserList {
+  owners: string[];
+  admins: AdminUserRecord[];
+}
+
+type CallResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+/** Turns a Cloud Functions error into a sentence for the person, keeping the server's own message when it gave one. */
+function describeCallError(err: unknown): string {
+  const code = (err as { code?: string }).code || '';
+  const message = (err as { message?: string }).message || '';
+  if (code.includes('permission-denied')) return message || 'You do not have permission to do that.';
+  if (code.includes('invalid-argument') || code.includes('failed-precondition') || code.includes('not-found')) {
+    return message || 'That request was not valid.';
+  }
+  if (code.includes('unauthenticated')) return 'Sign in again to continue.';
+  return 'Could not reach the server. Please try again.';
+}
+
+async function callAdminFunction<T>(name: string, payload?: Record<string, unknown>): Promise<CallResult<T>> {
+  const functions = getFunctionsClient();
+  if (!functions) return { ok: false, error: 'The server is not available in this deployment.' };
+  try {
+    const result = await httpsCallable(functions, name)(payload);
+    return { ok: true, data: result.data as T };
+  } catch (err) {
+    console.warn(`[Firebase] ${name} failed:`, err);
+    return { ok: false, error: describeCallError(err) };
+  }
+}
+
+export const listAdminUsers = () => callAdminFunction<AdminUserList>('listAdminUsers');
+export const grantAdminUser = (email: string) =>
+  callAdminFunction<{ email: string; alreadyAdmin: boolean; accountCreated: boolean }>('grantAdminUser', { email });
+export const revokeAdminUser = (email: string) => callAdminFunction<{ email: string }>('revokeAdminUser', { email });
 
 /**
  * Completes the "Connect Google Calendar" flow: hands the one-time OAuth
@@ -317,18 +445,17 @@ interface BoothEventDoc {
   config: EventConfig;
   slots: TimeSlot[];
   roster: StaffMember[];
-  stakeholders?: KeyStakeholder[];
-  keynoteSessions?: KeynoteSession[];
   updatedAt: string;
 }
 
 function docToStoredEvent(data: BoothEventDoc): StoredEventData {
+  // The document's own updatedAt moves on every staff change, but staff may not edit config, so the
+  // config copy can lag behind. Report the later of the two so "most recently changed" stays true.
+  const updatedAt = data.updatedAt && data.updatedAt > (data.config.updatedAt || '') ? data.updatedAt : data.config.updatedAt;
   return {
-    config: data.config,
+    config: { ...data.config, updatedAt },
     slots: data.slots,
     roster: data.roster,
-    stakeholders: data.stakeholders || [],
-    keynoteSessions: data.keynoteSessions || [],
   };
 }
 
@@ -345,8 +472,9 @@ export async function fetchAllEvents(): Promise<EventConfig[]> {
     const snap = await getDocs(collection(db, COLLECTION));
     reportConnectivity(true);
     return snap.docs
-      .map((d) => (d.data() as BoothEventDoc).config)
-      .filter((c): c is EventConfig => Boolean(c));
+      .map((d) => d.data() as BoothEventDoc)
+      .filter((d) => Boolean(d.config))
+      .map((d) => docToStoredEvent(d).config);
   } catch (err) {
     reportConnectivity(false);
     throw err;
@@ -369,18 +497,37 @@ export async function fetchEventByKey(
   }
 
   try {
-    const eventsRef = collection(db, COLLECTION);
-
-    const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
-    if (!byAdmin.empty) {
-      reportConnectivity(true);
-      return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
+    // Staff path, open to anyone with the link: the key points at an event through publicLinks,
+    // and one event can be read by id without listing events.
+    const link = await getDoc(doc(db, PUBLIC_LINKS, key));
+    if (link.exists()) {
+      const eventId = (link.data() as { eventId?: string }).eventId;
+      if (eventId) {
+        const snap = await getDoc(doc(db, COLLECTION, eventId));
+        reportConnectivity(true);
+        if (snap.exists()) {
+          return { data: docToStoredEvent(snap.data() as BoothEventDoc), role: 'staff' };
+        }
+      }
     }
 
-    const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
-    reportConnectivity(true);
-    if (!byPublic.empty) {
-      return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
+    // Admin path: look the key up among events. Listing events needs an admin, so for anyone else
+    // this is refused and means "not found", not "offline".
+    try {
+      const eventsRef = collection(db, COLLECTION);
+      const byAdmin = await getDocs(query(eventsRef, where('adminKey', '==', key), limit(1)));
+      if (!byAdmin.empty) {
+        reportConnectivity(true);
+        return { data: docToStoredEvent(byAdmin.docs[0].data() as BoothEventDoc), role: 'admin' };
+      }
+      const byPublic = await getDocs(query(eventsRef, where('publicKey', '==', key), limit(1)));
+      reportConnectivity(true);
+      if (!byPublic.empty) {
+        return { data: docToStoredEvent(byPublic.docs[0].data() as BoothEventDoc), role: 'staff' };
+      }
+    } catch (err) {
+      if ((err as { code?: string }).code !== 'permission-denied') throw err;
+      reportConnectivity(true);
     }
 
     return null;
@@ -391,10 +538,8 @@ export async function fetchEventByKey(
 }
 
 /**
- * Pushes the full current event state (config + slots + roster) to
- * Firestore. Fire-and-forget from the caller's perspective: failures are
- * logged but never block the local-first UX, since localStorage already
- * has the authoritative local copy.
+ * Writes a whole event, and the lookup that lets staff open it by its public key. Creating or replacing
+ * an event is for admins, and the rules enforce that. Staff changes use pushStaffChange instead.
  */
 export async function pushEventToFirebase(eventData: StoredEventData): Promise<boolean> {
   const db = getDb();
@@ -407,15 +552,114 @@ export async function pushEventToFirebase(eventData: StoredEventData): Promise<b
       config: eventData.config,
       slots: eventData.slots,
       roster: eventData.roster,
-      stakeholders: eventData.stakeholders || [],
-      keynoteSessions: eventData.keynoteSessions || [],
       updatedAt: new Date().toISOString(),
     });
+    await setDoc(doc(db, PUBLIC_LINKS, eventData.config.publicKey), { eventId: eventData.config.id });
     reportConnectivity(true);
     return true;
   } catch (err) {
     console.warn('[Firebase] Event push failed:', err);
     reportConnectivity(false);
+    return false;
+  }
+}
+
+/**
+ * What staff are allowed to change on the open staff page: shifts and roster, and when it happened.
+ * Nothing else, so the database rules can allow exactly this and refuse the rest. The names here are
+ * checked against firestore.rules by a test.
+ */
+export const STAFF_WRITABLE_FIELDS = ['slots', 'roster', 'updatedAt'] as const;
+
+export async function pushStaffChange(eventId: string, slots: TimeSlot[], roster: StaffMember[]): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+
+  try {
+    await updateDoc(doc(db, COLLECTION, eventId), { slots, roster, updatedAt: new Date().toISOString() });
+    reportConnectivity(true);
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] Staff change failed:', err);
+    reportConnectivity(false);
+    return false;
+  }
+}
+
+/**
+ * Makes sure every event has its public-link entry, so existing staff links keep working under the
+ * rules. Safe to run again. Admins only: it lists events. Returns how many entries it added.
+ */
+export async function ensurePublicLinks(): Promise<number> {
+  const db = getDb();
+  if (!db) return 0;
+  try {
+    const snap = await getDocs(collection(db, COLLECTION));
+    let added = 0;
+    for (const d of snap.docs) {
+      const data = d.data() as BoothEventDoc;
+      const key = data.publicKey || data.config?.publicKey;
+      if (!key) continue;
+      const link = await getDoc(doc(db, PUBLIC_LINKS, key));
+      if (!link.exists()) {
+        await setDoc(doc(db, PUBLIC_LINKS, key), { eventId: d.id });
+        added += 1;
+      }
+    }
+    return added;
+  } catch (err) {
+    console.warn('[Firebase] ensurePublicLinks failed:', err);
+    return 0;
+  }
+}
+
+/**
+ * Module data (budget, schedule, notes and so on) lives in admin-only documents
+ * under the event: boothEvents/{eventId}/modules/{moduleId}. That keeps it out of
+ * the shared event document, which staff can read and write without signing in,
+ * and out of reach of pushEventToFirebase, which overwrites that document whole.
+ * The rules for this path require the admin sign-in (see firestore.rules).
+ *
+ * Returns undefined when Firebase is unavailable or the read was refused, null
+ * when the document simply doesn't exist yet. Connectivity is deliberately not
+ * reported from here: a refused read means "not signed in", not "offline".
+ */
+export async function fetchModuleDoc(
+  eventId: string,
+  moduleId: string
+): Promise<{ data: unknown; updatedAt: string } | null | undefined> {
+  const db = getDb();
+  if (!db) return undefined;
+  try {
+    const snap = await getDoc(doc(db, COLLECTION, eventId, 'modules', moduleId));
+    if (!snap.exists()) return null;
+    const raw = snap.data() as { data?: unknown; updatedAt?: string };
+    return { data: raw.data, updatedAt: raw.updatedAt || '' };
+  } catch (err) {
+    console.warn(`[Firebase] fetchModuleDoc(${moduleId}) failed:`, err);
+    return undefined;
+  }
+}
+
+export async function pushModuleDoc(
+  eventId: string,
+  moduleId: string,
+  data: unknown,
+  updatedAt: string
+): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  try {
+    // Firestore rejects undefined field values; a JSON round trip drops them.
+    const clean = JSON.parse(JSON.stringify(data));
+    await setDoc(doc(db, COLLECTION, eventId, 'modules', moduleId), {
+      data: clean,
+      updatedAt,
+      schemaVersion: 1,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`[Firebase] pushModuleDoc(${moduleId}) failed:`, err);
     return false;
   }
 }
@@ -427,6 +671,24 @@ export async function pushEventToFirebase(eventData: StoredEventData): Promise<b
  * caller's real signed-in identity, rather than written directly from
  * the client the way staff's claim/release actions are.
  */
+const linkedThisSession = new Set<string>();
+
+/**
+ * Makes sure staff can find this event from its public key. The server function also does this, but the
+ * app does not depend on it: this is an admin writing, which the rules allow, so a new event's staff
+ * link works even if the functions have not been redeployed. Once per key per session, and never fatal.
+ */
+async function ensurePublicLink(publicKey: string | undefined, eventId: string): Promise<void> {
+  const db = getDb();
+  if (!db || !publicKey || linkedThisSession.has(publicKey)) return;
+  try {
+    await setDoc(doc(db, PUBLIC_LINKS, publicKey), { eventId });
+    linkedThisSession.add(publicKey);
+  } catch (err) {
+    console.warn('[Firebase] Could not write the staff link entry:', err);
+  }
+}
+
 export async function pushEventToFirebaseAsAdmin(eventData: StoredEventData): Promise<boolean> {
   const functions = getFunctionsClient();
   if (!functions) return false;
@@ -439,6 +701,7 @@ export async function pushEventToFirebaseAsAdmin(eventData: StoredEventData): Pr
       slots: eventData.slots,
       roster: eventData.roster,
     });
+    await ensurePublicLink(eventData.config.publicKey, eventData.config.id);
     reportConnectivity(true);
     return true;
   } catch (err) {
@@ -561,14 +824,7 @@ export async function claimShiftAtomic(
           : m
       );
 
-      transaction.set(docRef, {
-        adminKey: data.config.adminKey,
-        publicKey: data.config.publicKey,
-        config: data.config,
-        slots: nextSlots,
-        roster: nextRoster,
-        updatedAt: new Date().toISOString(),
-      });
+      transaction.update(docRef, { slots: nextSlots, roster: nextRoster, updatedAt: new Date().toISOString() });
 
       return {
         success: true as const,

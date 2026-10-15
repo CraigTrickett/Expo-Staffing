@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
-  AlertTriangle,
   Calendar,
-  CheckCircle2,
   ChevronRight,
-  Clock,
   ExternalLink,
   History,
-  Layers,
-  LogOut,
-  Plus,
-  RefreshCw,
-  Sparkles,
-  UserCheck,
-  UserPlus,
   Users,
   X,
 } from 'lucide-react';
@@ -25,18 +15,15 @@ import { RosterLedger } from './RosterLedger';
 import { ZeroHourDrawer } from './ZeroHourDrawer';
 import { AdminShareModal } from './AdminShareModal';
 import { ShiftMatrix } from '../grid/ShiftMatrix';
-import { MyEventsPanel } from '../common/MyEventsPanel';
-import { signOutAdmin } from '@/lib/firebase';
 import { useModalA11y } from '@/lib/hooks';
 import { cn, formatTime12h, roundTargetHoursForDisplay } from '@/lib/utils';
 import type { StaffMember, TimeSlot } from '@/types';
 
 interface AdminDashboardProps {
   adminKey: string;
-  adminEmail: string;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminEmail }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey }) => {
   const {
     currentEvent,
     slots,
@@ -62,7 +49,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
   const assignModalRef = useModalA11y(Boolean(selectedSlotForAssign), () => setSelectedSlotForAssign(null));
   const [showZeroHoursDrawer, setShowZeroHoursDrawer] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showMyEvents, setShowMyEvents] = useState(false);
   const [activeTab, setActiveTab] = useState<'matrix' | 'roster'>('matrix');
 
   useEffect(() => {
@@ -78,7 +64,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
     return (
       <div className="max-w-7xl mx-auto py-20 px-4 flex flex-col items-center justify-center space-y-4 text-center">
         <div className="w-10 h-10 border-4 border-[#b9dcf0] border-t-[#0063a3] rounded-full animate-spin" />
-        <p className="text-sm text-[#46535e] font-medium">Loading Expo Staffing Admin...</p>
+        <p className="text-sm text-[#1f2f3d] font-medium">Loading Showrunner Admin...</p>
       </div>
     );
   }
@@ -90,7 +76,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
           <AlertCircle className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-[#252a2e]">Event Schedule Not Found</h2>
-        <p className="text-sm text-[#46535e] leading-relaxed">
+        <p className="text-sm text-[#1f2f3d] leading-relaxed">
           No schedule was found for admin key <code className="text-[#252a2e] bg-[#e7eaef] px-1.5 py-0.5 rounded">{adminKey}</code>.
           You can create a new schedule or load the interactive SaaS Disrupt demo.
         </p>
@@ -100,13 +86,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
             onClick={resetToDemo}
             className="focus-ring px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors"
           >
-            Load Demo Event
+            Load demo event
           </button>
           <a
-            href="#/"
+            href="#/new"
             className="focus-ring px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors"
           >
-            Create New Event
+            Create new event
           </a>
         </div>
       </div>
@@ -124,29 +110,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
-      {/* Admin Session Bar */}
-      <div className="flex items-center justify-between text-xs text-[#46535e]">
-        <span>
-          Signed in as <span className="font-semibold text-[#252a2e]">{adminEmail}</span>
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowMyEvents(true)}
-            className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#0063a3] border border-[#d8dce0] hover:border-[#0063a3] bg-white transition-colors cursor-pointer"
-          >
-            <History className="w-3.5 h-3.5" />
-            <span>All Events</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => signOutAdmin()}
-            className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#46535e] hover:text-[#da3832] border border-[#d8dce0] hover:border-[#f5b5b3] bg-white transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log Out</span>
-          </button>
-        </div>
+      {/* Admin Session Bar. Who is signed in, and logging out, live in the profile menu in the header. */}
+      <div className="flex items-center justify-end text-xs text-[#1f2f3d]">
+        <a
+          href="#/events"
+          className="focus-ring inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-[#1f2f3d] hover:text-[#0063a3] hover:bg-[#e5f2f8] transition-colors cursor-pointer"
+        >
+          <History className="w-3.5 h-3.5" />
+          <span>All events</span>
+        </a>
       </div>
 
       {/* Global Error Banner */}
@@ -165,8 +137,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
           </button>
         </div>
       )}
-
-      {showMyEvents && <MyEventsPanel onClose={() => setShowMyEvents(false)} />}
 
       {/* Google Calendar auto-invite connection */}
       <GoogleCalendarConnect config={currentEvent} />
@@ -195,14 +165,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
               'focus-ring px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
               activeTab === 'matrix'
                 ? 'bg-[#0063a3] text-white shadow-xs'
-                : 'bg-white text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
+                : 'bg-white text-[#1f2f3d] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
             )}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Shifts</span>
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded font-mono',
-              activeTab === 'matrix' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#46535e]'
+              activeTab === 'matrix' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#1f2f3d]'
             )}>
               {slots.length}
             </span>
@@ -215,14 +185,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
               'focus-ring px-4 py-2 rounded text-xs font-semibold flex items-center space-x-2 transition-colors',
               activeTab === 'roster'
                 ? 'bg-[#0063a3] text-white shadow-xs'
-                : 'bg-white text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
+                : 'bg-white text-[#1f2f3d] hover:text-[#252a2e] hover:bg-[#f1f3f6] border border-[#d8dce0]'
             )}
           >
             <Users className="w-3.5 h-3.5" />
             <span>Staffing</span>
             <span className={cn(
               'text-[10px] px-1.5 py-0.5 rounded font-mono',
-              activeTab === 'roster' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#46535e]'
+              activeTab === 'roster' ? 'bg-[#005084] text-white' : 'bg-[#e7eaef] text-[#1f2f3d]'
             )}>
               {roster.length}
             </span>
@@ -234,7 +204,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
           href={`#/event/${currentEvent.publicKey}`}
           className="focus-ring rounded inline-flex items-center space-x-1.5 text-xs text-[#0063a3] hover:text-[#005084] font-semibold transition-colors"
         >
-          <span>Open Staff</span>
+          <span>Open staff</span>
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </div>
@@ -242,10 +212,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
       {/* Tab 1: Interactive Matrix View */}
       {activeTab === 'matrix' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-[#46535e]">
-            <p>
-              Click any shift tile to manually assign staff, remove representatives, or alter slot capacity.
-            </p>
+          <div className="flex items-center justify-end text-xs text-[#1f2f3d]">
             <div className="flex items-center space-x-3 text-[11px] font-mono">
               <span className="flex items-center space-x-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#00823b] inline-block" />
@@ -347,7 +314,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
 
             {/* Currently Assigned Staff */}
             <div>
-              <div className="text-xs font-semibold text-[#46535e] uppercase tracking-wider mb-2 flex items-center justify-between">
+              <div className="text-xs font-semibold text-[#1f2f3d] uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span>Assigned Staff ({activeSlot.bookings.length}/{activeSlot.capacity})</span>
                 {activeSlot.bookings.length >= activeSlot.capacity && (
                   <span className="text-[11px] text-[#00823b] font-semibold">Capacity Reached</span>
@@ -389,7 +356,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminKey, adminE
             {/* Manual Assignment Options */}
             {activeSlot.bookings.length < activeSlot.capacity && (
               <div>
-                <div className="text-xs font-semibold text-[#46535e] uppercase tracking-wider mb-2">
+                <div className="text-xs font-semibold text-[#1f2f3d] uppercase tracking-wider mb-2">
                   Assign Available Roster Member:
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1 pr-1">

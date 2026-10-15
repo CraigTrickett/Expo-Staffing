@@ -1,27 +1,20 @@
-import React, { useState, useMemo } from 'react';
-import {
-  Calendar,
-  Clock,
-  Users,
-  Sparkles,
-  ArrowRight,
-  Shield,
-  Zap,
-  Check,
-  Plus,
-  Minus,
-  FileText,
-  MapPin,
-  Globe,
-  HelpCircle,
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Calendar, Clock, Users, ArrowRight, Zap, Plus, Minus, MapPin, Globe } from 'lucide-react';
 import type { SlotDuration } from '@/types';
 import { cn, getBrowserTimezone, getTimezoneOptions } from '@/lib/utils';
 import { useEventStore } from '@/store/useEventStore';
+import { planEvent } from '@/lib/eventPlan';
 
 interface CreateEventWizardProps {
   onEventCreated?: (adminKey: string) => void;
 }
+
+/** The names pasted into the roster box: one per line or comma, trimmed, none blank. */
+const parseRoster = (raw: string): string[] =>
+  raw
+    .split(/[\n,]+/)
+    .map((n) => n.trim().slice(0, 100))
+    .filter(Boolean);
 
 export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCreated }) => {
   // Helper to compute default dates (tomorrow and day after)
@@ -48,6 +41,12 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  const plan = useMemo(
+    () =>
+      planEvent({ startDate, endDate, dailyStartTime, dailyEndTime, slotDurationMinutes, staffCapacityPerSlot, rosterCount: parseRoster(rosterRaw).length }),
+    [startDate, endDate, dailyStartTime, dailyEndTime, slotDurationMinutes, staffCapacityPerSlot, rosterRaw]
+  );
+
   // Quick preset templates for rapid setup
   const applyPreset = (presetType: 'tech-expo' | 'single-day' | 'intensive') => {
     if (presetType === 'tech-expo') {
@@ -63,7 +62,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
       setStaffCapacityPerSlot(3);
     } else if (presetType === 'intensive') {
       setDailyStartTime('08:30');
-      setDailyEndTime('19:00');
+      setDailyEndTime('18:30');
       setSlotDurationMinutes(60);
       setStaffCapacityPerSlot(4);
     }
@@ -78,23 +77,15 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
       return;
     }
 
-    if (startDate > endDate) {
-      setValidationError('Event Start Date must be on or before End Date.');
-      return;
-    }
-
-    if (dailyStartTime >= dailyEndTime) {
-      setValidationError('Daily Start Time must precede End Time.');
+    if (plan.errors.length > 0) {
+      setValidationError(plan.errors[0]);
       return;
     }
 
     setIsSubmitting(true);
 
     // Parse initial roster
-    const rosterLines = rosterRaw
-      .split(/[\n,]+/)
-      .map((s) => s.trim().slice(0, 100))
-      .filter(Boolean);
+    const rosterLines = parseRoster(rosterRaw);
 
     // Save into Zustand Event Store (with localStorage multi-event persistence)
     const createdEvent = useEventStore.getState().createEvent({
@@ -122,41 +113,31 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
     <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4">
       {/* Wizard Header Hero */}
       <div className="text-center space-y-3 mb-8">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded bg-[#e5f2f8] border border-[#b9dcf0] text-xs font-mono text-[#0063a3] font-semibold">
-          <span className="w-2 h-2 rounded-full bg-[#00823b] animate-pulse" />
-          <span>Staff Join With Zero Signups &bull; Admin Sign-In Required</span>
-        </div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#252a2e]">
           Create Expo Schedule
         </h1>
-        <p className="text-sm text-[#46535e] max-w-xl mx-auto">
-          Generate an interactive self-service shift matrix in 60 seconds. Share one link with your
-          booth team to let reps claim their hours without logins.
-        </p>
-
         {/* Quick Presets */}
         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-          <span className="text-xs text-[#5b6770] font-semibold mr-1">Presets:</span>
           <button
             type="button"
             onClick={() => applyPreset('tech-expo')}
             className="text-xs px-3 py-1.5 rounded bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] transition-colors cursor-pointer font-semibold shadow-xs"
           >
-            Multi-Day Expo
+            Multi-day expo
           </button>
           <button
             type="button"
             onClick={() => applyPreset('single-day')}
             className="text-xs px-3 py-1.5 rounded bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] transition-colors cursor-pointer font-semibold shadow-xs"
           >
-            Single-Day Fair
+            Single-day fair
           </button>
           <button
             type="button"
             onClick={() => applyPreset('intensive')}
             className="text-xs px-3 py-1.5 rounded bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] transition-colors cursor-pointer font-semibold shadow-xs"
           >
-            Heavy Traffic (4 Reps)
+            Heavy traffic (4 reps)
           </button>
         </div>
       </div>
@@ -176,7 +157,6 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
         {/* Section 1: Event Identity */}
         <div className="space-y-4">
           <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#0063a3] font-mono">
-            <Sparkles className="w-3.5 h-3.5" />
             <span>1. Event Identity &amp; Location</span>
           </div>
 
@@ -235,8 +215,7 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
                 </select>
               </div>
               <p className="text-[11px] text-[#5b6770] mt-1">
-                Defaults to your own browser's timezone — confirm or change this to match the venue,
-                not wherever you happen to be creating this event from.
+                Defaults to your browser's timezone. Set it to the venue's.
               </p>
             </div>
           </div>
@@ -354,6 +333,21 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
             </div>
           </div>
 
+          {(plan.errors.length > 0 || plan.warnings.length > 0) && (
+            <ul role="status" className="space-y-1 text-xs">
+              {plan.errors.map((message) => (
+                <li key={message} className="font-semibold text-[#9e1b16]">
+                  {message}
+                </li>
+              ))}
+              {plan.warnings.map((message) => (
+                <li key={message} className="text-[#6e4600]">
+                  {message}
+                </li>
+              ))}
+            </ul>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             {/* Staff Capacity Stepper */}
             <div>
@@ -421,9 +415,6 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
               placeholder="Paste staff names (one per line or comma-separated)..."
               className="w-full bg-white border border-[#d8dce0] focus:border-[#0063a3] rounded p-3 text-xs text-[#252a2e] placeholder:text-[#5b6770] focus:outline-hidden focus:ring-2 focus:ring-[#0063a3]/25 transition-colors font-mono leading-relaxed"
             />
-            <p className="text-[11px] text-[#5b6770] mt-1">
-              Reps can also claim shifts and add themselves anytime using the public link.
-            </p>
           </div>
         </div>
 
@@ -435,13 +426,9 @@ export const CreateEventWizard: React.FC<CreateEventWizardProps> = ({ onEventCre
             className="w-full py-3 px-6 rounded bg-[#0063a3] hover:bg-[#005084] active:bg-[#003e66] text-white font-bold text-sm transition-colors flex items-center justify-center space-x-2 shadow-xs cursor-pointer disabled:opacity-50"
           >
             <Zap className="w-4 h-4 fill-white" />
-            <span>Generate Event Schedule</span>
+            <span>Generate event schedule</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-          <div className="flex items-center justify-center space-x-2 text-xs text-[#5b6770] mt-3 text-center">
-            <Shield className="w-3.5 h-3.5 text-[#00823b]" />
-            <span>Instant provisioning &bull; Staff join via your shared link, no account needed</span>
-          </div>
         </div>
       </form>
     </div>

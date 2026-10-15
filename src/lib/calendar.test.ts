@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateIcsFile, formatIcsDateTime } from './calendar';
+import { foldIcsLine, generateIcsFile, formatIcsDateTime } from './calendar';
 import type { EventConfig, TimeSlot, ShiftBooking } from '@/types';
 
 function baseConfig(overrides: Partial<EventConfig> = {}): EventConfig {
@@ -140,5 +140,38 @@ describe('generateIcsFile', () => {
       [{ slot: baseSlot(), booking: baseBooking() }]
     );
     expect(ics).toContain('LOCATION:Conference Exhibition Hall');
+  });
+});
+
+
+describe('line folding (RFC 5545)', () => {
+  const octets = (l: string) => new TextEncoder().encode(l).length;
+  it('leaves a short line alone', () => {
+    expect(foldIcsLine('SUMMARY:Short')).toBe('SUMMARY:Short');
+    expect(foldIcsLine('x'.repeat(75))).toBe('x'.repeat(75));
+  });
+  it('splits a long line at 75 octets, continuing with a space, and loses nothing', () => {
+    const long = `DESCRIPTION:${'word '.repeat(60)}`;
+    const folded = foldIcsLine(long);
+    const lines = folded.split('\r\n');
+    expect(lines.length).toBeGreaterThan(1);
+    for (const l of lines) expect(octets(l)).toBeLessThanOrEqual(75);
+    for (const l of lines.slice(1)) expect(l.startsWith(' ')).toBe(true);
+    expect(lines.map((l, i) => (i === 0 ? l : l.slice(1))).join('')).toBe(long);
+  });
+  it('never splits a multi-byte character', () => {
+    const long = `SUMMARY:${'é😀'.repeat(40)}`;
+    const folded = foldIcsLine(long);
+    const lines = folded.split('\r\n');
+    for (const l of lines) expect(octets(l)).toBeLessThanOrEqual(75);
+    expect(lines.map((l, i) => (i === 0 ? l : l.slice(1))).join('')).toBe(long);
+    expect(folded).not.toContain('\uFFFD');
+  });
+  it('every line of a whole calendar is within the limit', () => {
+    const ev = { id: 'e', title: 'A very long event title '.repeat(8), location: 'A long location, '.repeat(8), startDate: '2026-11-09', endDate: '2026-11-09', timezone: 'Europe/London', adminKey: 'a', publicKey: 'p' } as unknown as EventConfig;
+    const slot = { id: 's', date: '2026-11-09', startTime: '09:00', endTime: '10:00', capacity: 1, isFull: false, bookings: [] } as unknown as TimeSlot;
+    const booking = { id: 'b', slotId: 's', staffId: 'x', staffName: 'Name', staffEmail: 'a@b.com', bookedAt: '' } as ShiftBooking;
+    const lines = generateIcsFile(ev, [{ slot, booking }]).split('\r\n');
+    for (const l of lines) expect(octets(l)).toBeLessThanOrEqual(75);
   });
 });

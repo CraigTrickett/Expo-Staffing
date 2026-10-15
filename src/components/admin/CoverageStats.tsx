@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   AlertTriangle,
-  Calendar,
   CheckCircle2,
   Clock,
   Copy,
@@ -125,7 +124,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
                 onClick={() => {
                   const trimmedTitle = editTitle.trim();
                   if (!trimmedTitle) {
-                    toast.error('Event name cannot be blank.', 'Invalid Name');
+                    toast.error('Event name cannot be blank.', 'Invalid name');
                     return;
                   }
                   onUpdateEventDetails?.({ title: trimmedTitle, location: editLocation.trim() });
@@ -168,17 +167,15 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             type="button"
             onClick={handleCopyLink}
             className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-            title="Copy Public Signup Link to share with staff"
           >
             <Copy className="w-3.5 h-3.5" />
-            <span>{copied ? 'Copied!' : 'Copy Staff Link'}</span>
+            <span>{copied ? 'Copied!' : 'Copy staff link'}</span>
           </button>
           {onOpenShareModal && (
             <button
               type="button"
               onClick={onOpenShareModal}
               className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#0063a3] border border-[#0063a3] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-              title="Open the share modal with QR code and admin link"
             >
               <Share2 className="w-3.5 h-3.5 text-[#0063a3]" />
               <span>Share &amp; QR</span>
@@ -188,7 +185,6 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             type="button"
             onClick={handleExportCsv}
             className="focus-ring flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#f1f3f6] text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-            title="Export the full shift schedule, including open slots, as a CSV file"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -198,7 +194,6 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="focus-ring p-2 bg-white hover:bg-[#f1f3f6] text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] rounded text-xs transition-colors shadow-xs"
-            title="Preview Staff Shift Picker in new tab"
           >
             <ExternalLink className="w-4 h-4" />
           </a>
@@ -331,7 +326,7 @@ export const CoverageStats: React.FC<CoverageStatsProps> = ({
                 : 'bg-white hover:bg-[#f1f3f6] text-[#46535e] border border-[#d8dce0]'
             )}
           >
-            <span>{zeroHoursCount > 0 ? 'View Uncommitted Staff' : 'All Staff Committed'}</span>
+            <span>{zeroHoursCount > 0 ? 'View uncommitted staff' : 'All staff committed'}</span>
           </button>
         </div>
 

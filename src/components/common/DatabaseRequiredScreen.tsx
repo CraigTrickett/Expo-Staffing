@@ -16,12 +16,10 @@ export const DatabaseRequiredScreen: React.FC = () => {
           <DatabaseZap className="w-7 h-7" />
         </div>
         <h1 className="text-xl font-bold text-[#252a2e] tracking-tight">
-          Database Not Connected
+          Database not connected
         </h1>
         <p className="text-sm text-[#46535e] leading-relaxed">
-          This app requires a connected Firebase project to run — it does not operate on
-          browser-only storage. Set the <code className="text-xs bg-[#e7eaef] px-1.5 py-0.5 rounded font-mono">VITE_FIREBASE_*</code> environment
-          variables for this deployment, then reload.
+          The database is not set up for this deployment. Ask an administrator to finish the setup, then reload.
         </p>
         <a
           href="https://github.com/CraigTrickett/Expo-Staffing/blob/main/FIREBASE_SETUP.md"

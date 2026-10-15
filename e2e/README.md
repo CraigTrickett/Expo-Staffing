@@ -150,3 +150,10 @@ All three `google-calendar-integration.spec.ts` tests are skipped with a
 clear reason if any of these aren't set — they never fail silently or
 report a false pass.
 
+
+## After the menu and security changes
+
+These specs were updated for the new addresses and labels (the create page is `#/new`,
+`All events` is a link, the profile menu holds Log out) and `navigation.spec.ts` was added.
+They were edited without a browser to run them in, so run `npm run test:e2e` and expect to adjust
+a selector or two. Run `npm run test:rules` too: it checks `firestore.rules` against the emulator.

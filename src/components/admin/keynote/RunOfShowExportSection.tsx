@@ -1,388 +1,249 @@
-import React, { useState } from 'react';
-import {
-  FileText,
-  Copy,
-  Download,
-  Eye,
-  EyeOff,
-  Check,
-  ExternalLink,
-  Presentation,
-  Clock,
-  Calendar,
-  Layers,
-  Sparkles,
-  CheckCircle2,
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Check, ChevronRight, Copy, Download, Eye, EyeOff, FileText } from 'lucide-react';
 import type { KeynoteSession, KeyStakeholder } from '@/types';
+import type { KeynoteDocumentSettings } from '@/types/keynoteDocument';
+import type { Task } from '@/types/tasks';
 import {
-  generateKeynoteMarkdown,
-  downloadMarkdownFile,
   copyFormattedForGoogleDocs,
+  downloadMarkdownFile,
+  generateKeynoteHtml,
+  generateKeynoteMarkdown,
 } from '@/lib/keynote';
-import { formatDate } from '@/lib/utils';
+import type { RunOfShowContext } from '@/lib/keynote';
+import type { SaveState } from '@/lib/useModuleData';
+import { InlineText } from '@/components/common/InlineField';
+import { SaveStatus } from '@/components/common/SaveStatus';
 import { toast } from '@/components/common/Toast';
 
 interface RunOfShowExportSectionProps {
+  eventTitle: string;
+  /** The session being edited. Its abstract and break line are edited here. */
   session: KeynoteSession;
+  /** Every session in the event: the document covers all of them. */
+  sessions: KeynoteSession[];
   stakeholders: KeyStakeholder[];
+  settings: KeynoteDocumentSettings;
+  onSettingsChange: (patch: Partial<KeynoteDocumentSettings>) => void;
+  onUpdateSession: (patch: Partial<KeynoteSession>) => void;
+  openItems: Task[];
+  saveState: SaveState;
   className?: string;
 }
 
+const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'run-of-show';
+
+const FIELD = 'border-[#d8dce0] bg-white';
+
 export const RunOfShowExportSection: React.FC<RunOfShowExportSectionProps> = ({
+  eventTitle,
   session,
+  sessions,
   stakeholders,
+  settings,
+  onSettingsChange,
+  onUpdateSession,
+  openItems,
+  saveState,
   className = '',
 }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'rendered' | 'raw'>('rendered');
-  const [copiedType, setCopiedType] = useState<'docs' | 'markdown' | null>(null);
+  const [previewMode, setPreviewMode] = useState<'rendered' | 'markdown'>('rendered');
+  const [includeCues, setIncludeCues] = useState(false);
+  const [includeSlideLinks, setIncludeSlideLinks] = useState(false);
+  const [copied, setCopied] = useState<'docs' | 'markdown' | null>(null);
 
-  const speakerNameMap = new Map<string, string>();
-  stakeholders.forEach((s) => {
-    speakerNameMap.set(s.id, `${s.firstName} ${s.lastName}`.trim());
-  });
+  const ctx: RunOfShowContext = useMemo(
+    () => ({ eventTitle, settings, openItems, options: { includeCues, includeSlideLinks } }),
+    [eventTitle, settings, openItems, includeCues, includeSlideLinks]
+  );
 
-  const handleCopyGoogleDocs = async () => {
-    const success = await copyFormattedForGoogleDocs(session, stakeholders);
-    if (success) {
-      setCopiedType('docs');
-      setTimeout(() => setCopiedType(null), 2500);
-      toast.success(
-        'Formatted run of show copied! Paste directly into Google Docs (Ctrl+V / Cmd+V) to preserve tables and styling.',
-        'Ready for Google Docs'
-      );
+  // The preview is the same HTML that is copied, so what you see is what gets pasted.
+  const html = useMemo(() => (showPreview ? generateKeynoteHtml(sessions, stakeholders, ctx) : ''), [showPreview, sessions, stakeholders, ctx]);
+  const markdown = useMemo(
+    () => (showPreview && previewMode === 'markdown' ? generateKeynoteMarkdown(sessions, stakeholders, ctx) : ''),
+    [showPreview, previewMode, sessions, stakeholders, ctx]
+  );
+
+  const flash = (kind: 'docs' | 'markdown') => {
+    setCopied(kind);
+    window.setTimeout(() => setCopied(null), 2500);
+  };
+
+  const handleCopyDocs = async () => {
+    const ok = await copyFormattedForGoogleDocs(sessions, stakeholders, ctx);
+    if (ok) {
+      flash('docs');
+      toast.success('Copied. Paste it into a Google Doc.');
     } else {
-      toast.error('Could not copy to clipboard. Please check browser permissions.', 'Copy Failed');
+      toast.error('Could not copy to the clipboard. Check the browser permissions.', 'Copy failed');
     }
   };
 
-  const handleCopyMarkdown = () => {
-    const md = generateKeynoteMarkdown(session, stakeholders);
-    navigator.clipboard.writeText(md);
-    setCopiedType('markdown');
-    setTimeout(() => setCopiedType(null), 2500);
-    toast.success('Markdown table copied to clipboard!', 'Markdown Copied');
+  const handleCopyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(generateKeynoteMarkdown(sessions, stakeholders, ctx));
+      flash('markdown');
+      toast.success('Markdown copied.');
+    } catch {
+      toast.error('Could not copy to the clipboard. Check the browser permissions.', 'Copy failed');
+    }
   };
 
   const handleDownload = () => {
-    const md = generateKeynoteMarkdown(session, stakeholders);
-    const filename = `${session.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-run-of-show.md`;
-    downloadMarkdownFile(filename, md);
-    toast.success(`Downloaded ${filename}`, 'Download Complete');
+    const filename = `${slug(settings.title || `${eventTitle} run of show`)}.md`;
+    downloadMarkdownFile(filename, generateKeynoteMarkdown(sessions, stakeholders, ctx));
+    toast.success(`Downloaded ${filename}`);
   };
 
   return (
-    <div className={`p-4 bg-[#f0f7fb] border border-[#b9dcf0] rounded shadow-2xs space-y-3 ${className}`}>
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-[#0063a3] shrink-0" />
+    <div className={`space-y-3 rounded border border-[#b9dcf0] bg-[#f0f7fb] p-4 shadow-2xs ${className}`}>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div className="flex items-start gap-2">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0063a3]" aria-hidden="true" />
           <div>
-            <span className="text-xs font-bold text-[#0063a3] block">
-              Structured Run of Show Export & Google Docs Document
-            </span>
-            <span className="text-[11px] text-[#46535e]">
-              Presentable document preview formatted for Google Docs, meetings, or Markdown export.
-            </span>
+            <h3 className="text-xs font-bold text-[#252a2e]">Structured Run of Show Export &amp; Google Docs Document</h3>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowPreview((prev) => !prev)}
-            className="focus-ring px-2.5 py-1.5 rounded text-xs font-semibold text-[#0063a3] hover:text-[#005084] hover:bg-[#e5f2f8] transition-colors cursor-pointer flex items-center gap-1.5 border border-[#b9dcf0] bg-white"
-            title={showPreview ? 'Hide document preview' : 'View formatted document preview'}
+            onClick={handleCopyDocs}
+            className="focus-ring flex cursor-pointer items-center gap-1.5 rounded bg-[#0063a3] px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#005084]"
           >
-            {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+            {copied === 'docs' ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+            {copied === 'docs' ? 'Copied' : 'Copy for Google Docs'}
           </button>
-
-          <button
-            type="button"
-            onClick={handleCopyGoogleDocs}
-            className="focus-ring px-3 py-1.5 rounded text-xs font-semibold bg-[#0063a3] text-white hover:bg-[#005084] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-            title="Copy as formatted rich text for Google Docs"
-          >
-            {copiedType === 'docs' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedType === 'docs' ? 'Copied for Docs!' : 'Copy for Google Docs'}</span>
-          </button>
-
           <button
             type="button"
             onClick={handleCopyMarkdown}
-            className="focus-ring px-2.5 py-1.5 rounded text-xs font-semibold bg-white text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] hover:border-[#0063a3] transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Copy raw Markdown syntax"
+            className="focus-ring flex cursor-pointer items-center gap-1.5 rounded border border-[#0063a3] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#0063a3] transition-colors hover:bg-[#e5f2f8]"
           >
-            {copiedType === 'markdown' ? <Check className="w-3.5 h-3.5 text-[#059669]" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="hidden md:inline">{copiedType === 'markdown' ? 'Copied MD!' : 'Copy Markdown'}</span>
+            {copied === 'markdown' ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+            {copied === 'markdown' ? 'Copied' : 'Copy Markdown'}
           </button>
-
           <button
             type="button"
             onClick={handleDownload}
-            className="focus-ring px-2.5 py-1.5 rounded text-xs font-semibold bg-white text-[#46535e] hover:text-[#252a2e] border border-[#d8dce0] hover:border-[#0063a3] transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Download .md file"
+            className="focus-ring flex cursor-pointer items-center gap-1.5 rounded border border-[#d8dce0] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#46535e] transition-colors hover:border-[#0063a3] hover:text-[#0063a3]"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Download .md</span>
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            Download .md
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPreview((v) => !v)}
+            aria-pressed={showPreview}
+            className="focus-ring flex cursor-pointer items-center gap-1.5 rounded border border-[#d8dce0] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#46535e] transition-colors hover:border-[#0063a3] hover:text-[#0063a3]"
+          >
+            {showPreview ? <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> : <Eye className="h-3.5 w-3.5" aria-hidden="true" />}
+            {showPreview ? 'Hide preview' : 'Show preview'}
           </button>
         </div>
       </div>
 
-      {/* Rendered Human-Friendly Preview */}
-      {showPreview && (
-        <div className="mt-3 pt-3 border-t border-[#b9dcf0] space-y-3 animate-in fade-in duration-200">
-          {/* View mode toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#5b6770] uppercase tracking-wider">
-              {previewMode === 'rendered' ? 'Formatted Document Sheet Preview' : 'Raw Markdown Code'}
-            </span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-[#46535e]">
+        <label className="flex cursor-pointer items-center gap-1.5">
+          <input type="checkbox" checked={includeCues} onChange={(e) => setIncludeCues(e.target.checked)} className="accent-[#0063a3]" />
+          Include stage cues
+        </label>
+        <label className="flex cursor-pointer items-center gap-1.5">
+          <input type="checkbox" checked={includeSlideLinks} onChange={(e) => setIncludeSlideLinks(e.target.checked)} className="accent-[#0063a3]" />
+          Include slide links
+        </label>
+      </div>
 
-            <div className="flex items-center p-0.5 bg-white border border-[#d8dce0] rounded text-[11px]">
-              <button
-                type="button"
-                onClick={() => setPreviewMode('rendered')}
-                className={`px-2.5 py-1 rounded font-semibold transition-colors cursor-pointer ${
-                  previewMode === 'rendered'
-                    ? 'bg-[#0063a3] text-white shadow-2xs'
-                    : 'text-[#5b6770] hover:text-[#252a2e]'
-                }`}
-              >
-                Presentable Sheet
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewMode('raw')}
-                className={`px-2.5 py-1 rounded font-semibold transition-colors cursor-pointer ${
-                  previewMode === 'raw'
-                    ? 'bg-[#0063a3] text-white shadow-2xs'
-                    : 'text-[#5b6770] hover:text-[#252a2e]'
-                }`}
-              >
-                Raw Markdown
-              </button>
+      <details className="group rounded border border-[#d8dce0] bg-white">
+        <summary className="focus-ring flex cursor-pointer list-none items-center gap-1.5 rounded px-3 py-2 text-xs font-bold text-[#252a2e]">
+          <ChevronRight className="h-3.5 w-3.5 text-[#5b6770] transition-transform group-open:rotate-90 motion-reduce:transition-none" aria-hidden="true" />
+          Document details
+        </summary>
+        <div className="space-y-4 border-t border-[#e7eaef] p-3">
+          <SaveStatus state={saveState} />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Field label="Document title" hint={`Blank uses "${eventTitle} \u2014 Run of Show".`}>
+              <InlineText value={settings.title} label="Document title" onCommit={(v) => onSettingsChange({ title: v })} className={FIELD} />
+            </Field>
+            <Field label="Headline">
+              <InlineText value={settings.headline} label="Document headline" onCommit={(v) => onSettingsChange({ headline: v })} className={FIELD} />
+            </Field>
+            <Field label="Descriptor" wide>
+              <InlineText value={settings.descriptor} label="Document descriptor" onCommit={(v) => onSettingsChange({ descriptor: v })} className={FIELD} />
+            </Field>
+            <Field label="Objective" hint="Blank uses the narrative theme from Stage 1." wide>
+              <InlineText multiline value={settings.objective} label="Objective" onCommit={(v) => onSettingsChange({ objective: v })} className={FIELD} />
+            </Field>
+            <Field label="Message" hint="Blank uses the core message from Stage 1." wide>
+              <InlineText multiline value={settings.message} label="Message" onCommit={(v) => onSettingsChange({ message: v })} className={FIELD} />
+            </Field>
+            <Field label="Structure" hint="Blank uses the section transitions from Stage 1." wide>
+              <InlineText multiline value={settings.structure} label="Structure" onCommit={(v) => onSettingsChange({ structure: v })} className={FIELD} />
+            </Field>
+          </div>
+
+          <div className="border-t border-[#e7eaef] pt-3">
+            <p className="mb-2 text-[11px] font-bold text-[#252a2e]">This session: {session.title}</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Abstract" hint="Leave a blank line between paragraphs." wide>
+                <InlineText multiline value={session.abstract ?? ''} label={`Abstract for ${session.title}`} onCommit={(v) => onUpdateSession({ abstract: v || undefined })} className={FIELD} />
+              </Field>
+              <Field label="Break after this session" hint='Printed between this session and the next, e.g. "Lunch Break".'>
+                <InlineText value={session.breakAfter ?? ''} label={`Break after ${session.title}`} onCommit={(v) => onUpdateSession({ breakAfter: v || undefined })} className={FIELD} />
+              </Field>
             </div>
+          </div>
+        </div>
+      </details>
+
+      {showPreview && (
+        <div className="space-y-2">
+          <div role="group" aria-label="Preview format" className="flex gap-1.5">
+            {(['rendered', 'markdown'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={previewMode === mode}
+                onClick={() => setPreviewMode(mode)}
+                className={`focus-ring cursor-pointer rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  previewMode === mode ? 'bg-[#0063a3] text-white' : 'border border-[#d8dce0] bg-white text-[#46535e] hover:border-[#0063a3]'
+                }`}
+              >
+                {mode === 'rendered' ? 'Document' : 'Markdown'}
+              </button>
+            ))}
           </div>
 
           {previewMode === 'rendered' ? (
-            /* Human-Friendly Presentable Document Sheet */
-            <div className="bg-white border border-[#d8dce0] rounded-md p-6 sm:p-8 shadow-xs max-h-[500px] overflow-y-auto space-y-5 text-[#252a2e]">
-              {/* Document Header */}
-              <div className="border-b-2 border-[#004f83] pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#0063a3] block mb-1">
-                      Run of Show &amp; Session Production Brief
-                    </span>
-                    <h3 className="text-xl sm:text-2xl font-bold text-[#004f83] tracking-tight">
-                      {session.title}
-                    </h3>
-                  </div>
-                  <span className="inline-flex items-center self-start px-2.5 py-1 rounded text-xs font-semibold bg-[#e5f2f8] text-[#0063a3] border border-[#b9dcf0]">
-                    {session.currentStage === 'signed_off'
-                      ? 'Stage 3: Signed Off & Locked'
-                      : session.currentStage === 'slide_deck_prep'
-                        ? 'Stage 2: Slide Deck Prep'
-                        : 'Stage 1: Run of Show'}
-                  </span>
-                </div>
-
-                {/* Metadata Summary Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
-                  <div className="flex items-center gap-2 text-[#46535e]">
-                    <Calendar className="w-3.5 h-3.5 text-[#0063a3] shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-[#7c878e] block uppercase font-medium">Date</span>
-                      <span className="font-semibold text-[#252a2e]">{formatDate(session.date)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[#46535e]">
-                    <Clock className="w-3.5 h-3.5 text-[#0063a3] shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-[#7c878e] block uppercase font-medium">Time Window</span>
-                      <span className="font-semibold text-[#252a2e] font-mono">{session.startTime} &ndash; {session.endTime}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[#46535e]">
-                    <Layers className="w-3.5 h-3.5 text-[#0063a3] shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-[#7c878e] block uppercase font-medium">Location</span>
-                      <span className="font-semibold text-[#252a2e]">{session.stageOrRoom || 'Mainstage'}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[#46535e]">
-                    <Presentation className="w-3.5 h-3.5 text-[#0063a3] shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-[#7c878e] block uppercase font-medium">Master Slide Deck</span>
-                      {session.slideDeckUrl ? (
-                        <a
-                          href={session.slideDeckUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-semibold text-[#0063a3] hover:underline flex items-center gap-1 truncate max-w-[150px]"
-                        >
-                          <span className="truncate">Open Presentation</span>
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                        </a>
-                      ) : (
-                        <span className="text-[#7c878e] italic">Pending Stage 2</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Narrative Context (if present) */}
-              {(session.stage1Narrative.themeStatement ||
-                session.stage1Narrative.flowHandoverNotes ||
-                session.stage1Narrative.customerInvolvementNotes) && (
-                <div className="bg-[#f8f9fa] border border-[#d8dce0] rounded p-3.5 space-y-2 text-xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#004f83] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#fbad26]" />
-                    <span>Narrative &amp; Flow Briefing</span>
-                  </span>
-                  {session.stage1Narrative.themeStatement && (
-                    <div>
-                      <strong className="text-[#252a2e]">Theme Statement: </strong>
-                      <span className="text-[#46535e]">{session.stage1Narrative.themeStatement}</span>
-                    </div>
-                  )}
-                  {session.stage1Narrative.coreMessage && (
-                    <div>
-                      <strong className="text-[#252a2e]">Core Message: </strong>
-                      <span className="text-[#46535e]">{session.stage1Narrative.coreMessage}</span>
-                    </div>
-                  )}
-                  {session.stage1Narrative.flowHandoverNotes && (
-                    <div>
-                      <strong className="text-[#252a2e]">Connecting Transitions: </strong>
-                      <span className="text-[#46535e]">{session.stage1Narrative.flowHandoverNotes}</span>
-                    </div>
-                  )}
-                  {session.stage1Narrative.customerInvolvementNotes && (
-                    <div>
-                      <strong className="text-[#252a2e]">Customer Involvement: </strong>
-                      <span className="text-[#46535e]">{session.stage1Narrative.customerInvolvementNotes}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Run of Show Table */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#252a2e] mb-2.5">
-                  Chronological Run of Show
-                </h4>
-                <div className="border border-[#d8dce0] rounded overflow-hidden">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-[#004f83] text-white">
-                        <th className="py-2 px-3 text-center w-12 font-semibold">#</th>
-                        <th className="py-2 px-3 w-28 font-semibold">Time</th>
-                        <th className="py-2 px-3 w-20 font-semibold">Duration</th>
-                        <th className="py-2 px-3 font-semibold">Speaker(s)</th>
-                        <th className="py-2 px-3 font-semibold">Topic / Segment</th>
-                        <th className="py-2 px-3 font-semibold w-24">Slide Link</th>
-                        <th className="py-2 px-3 font-semibold">Handover / Transition</th>
-                        <th className="py-2 px-3 font-semibold">Stage Cues &amp; AV</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#e5e9ec]">
-                      {session.segments.map((seg, idx) => {
-                        const resolvedSpeakers =
-                          seg.speakerIds && seg.speakerIds.length > 0
-                            ? seg.speakerIds.map((id) => speakerNameMap.get(id) || id).join(', ')
-                            : seg.speakerNames || 'TBD';
-
-                        return (
-                          <tr
-                            key={seg.id}
-                            className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fa]'}
-                          >
-                            <td className="py-2.5 px-3 font-mono font-bold text-center text-[#7c878e]">
-                              {idx + 1}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#252a2e]">
-                              {seg.time}
-                            </td>
-                            <td className="py-2.5 px-3 text-[#5b6770] font-mono text-[11px]">
-                              {seg.durationMinutes} min
-                            </td>
-                            <td className="py-2.5 px-3 font-semibold text-[#252a2e]">
-                              {resolvedSpeakers}
-                            </td>
-                            <td className="py-2.5 px-3 text-[#252a2e]">
-                              {seg.topic}
-                            </td>
-                            <td className="py-2.5 px-3 text-[11px]">
-                              {seg.slideDeckLink ? (
-                                <a
-                                  href={seg.slideDeckLink}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#0063a3] hover:underline font-semibold flex items-center gap-0.5"
-                                >
-                                  <span>Slides</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              ) : session.slideDeckUrl ? (
-                                <a
-                                  href={session.slideDeckUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#0063a3] hover:underline flex items-center gap-0.5"
-                                >
-                                  <span>Deck</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              ) : (
-                                <span className="text-[#7c878e]">&mdash;</span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-[#46535e] text-[11px]">
-                              {seg.handoverNotes || <span className="text-[#7c878e]">&mdash;</span>}
-                            </td>
-                            <td className="py-2.5 px-3 text-[#46535e] text-[11px]">
-                              {seg.cueNotes || <span className="text-[#7c878e]">&mdash;</span>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Sign off notice if present */}
-              {session.signedOffBy && (
-                <div className="p-3 bg-[#ecfdf5] border border-[#a7f3d0] rounded text-xs flex items-center gap-2 text-[#059669]">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>
-                    <strong>Production Signed Off:</strong> Approved by {session.signedOffBy} on {session.signedOffAt}
-                  </span>
-                </div>
-              )}
-
-              <div className="text-[10px] text-[#7c878e] border-t border-[#e5e9ec] pt-3 flex items-center justify-between">
-                <span>Expo Staffing Production Hub &bull; Trimble Modus</span>
-                <span>Ready to paste directly into Google Docs</span>
-              </div>
-            </div>
+            <div
+              role="region"
+              aria-label="Document preview"
+              tabIndex={0}
+              className="focus-ring max-h-[560px] overflow-auto rounded border border-[#d8dce0] bg-white p-6 text-black shadow-inner"
+              // The HTML comes from our own generator, which escapes every value typed into the app.
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
           ) : (
-            /* Raw Markdown Syntax View */
-            <div className="relative">
-              <pre className="p-4 bg-white border border-[#b9dcf0] rounded text-[11px] font-mono text-[#252a2e] overflow-x-auto max-h-[400px] leading-relaxed">
-                {generateKeynoteMarkdown(session, stakeholders)}
-              </pre>
-            </div>
+            <pre
+              role="region"
+              aria-label="Markdown preview"
+              tabIndex={0}
+              className="focus-ring max-h-[560px] overflow-auto whitespace-pre-wrap rounded border border-[#d8dce0] bg-white p-4 font-mono text-[11px] leading-relaxed text-[#252a2e]"
+            >
+              {markdown}
+            </pre>
           )}
         </div>
       )}
     </div>
   );
 };
+
+const Field: React.FC<{ label: string; hint?: string; wide?: boolean; children: React.ReactNode }> = ({ label, hint, wide, children }) => (
+  <div className={wide ? 'md:col-span-2' : undefined}>
+    <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
+      <span className="text-[11px] font-semibold text-[#252a2e]">{label}</span>
+      {hint && <span className="text-[11px] text-[#5b6770]">{hint}</span>}
+    </div>
+    {children}
+  </div>
+);

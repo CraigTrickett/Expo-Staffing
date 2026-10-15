@@ -5,9 +5,11 @@ import {
   updateKeynoteSession,
   reorderKeynoteSegments,
   recalculateSegmentTimes,
-  generateKeynoteMarkdown,
-  generateKeynoteHtml,
   deleteKeynoteSession,
+  addSampleKeynoteSessions,
+  createSampleKeynoteSessions,
+  normaliseKeynoteSession,
+  normaliseKeynoteSessions,
 } from './keynote';
 import type { KeyStakeholder, KeynoteSession } from '@/types';
 
@@ -139,101 +141,6 @@ describe('keynote helper', () => {
     expect(reordered.segments[1].id).toBe('seg_a');
   });
 
-  it('generates structured Markdown table with slide deck links and stage cues', () => {
-    const eventId = 'evt_test_markdown';
-    const session = createKeynoteSession(eventId, {
-      title: 'Spatial AI General Session',
-      date: '2026-11-05',
-      startTime: '09:00',
-      endTime: '10:00',
-      stageOrRoom: 'Mainstage Hall',
-      slideDeckUrl: 'https://docs.google.com/presentation/d/sample-keynote',
-    });
-
-    session.stage1Narrative.themeStatement = 'Connected Spatial Workflows';
-    session.stage1Narrative.flowHandoverNotes = '3D motion graphic bridge';
-    session.stage1Narrative.customerInvolvementNotes = 'Acme Corp on-stage demo';
-
-    const mockStakeholders: KeyStakeholder[] = [
-      {
-        id: 'stk_speaker_1',
-        eventId,
-        firstName: 'Elena',
-        lastName: 'Rostova',
-        email: 'elena@example.com',
-        team: 'Product Marketing',
-        involvedWith: ['Keynote / General Session'],
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    session.segments = [
-      {
-        id: 'seg_intro',
-        order: 1,
-        time: '09:00 - 09:10',
-        durationMinutes: 10,
-        topic: 'Keynote Introduction',
-        speakerIds: ['stk_speaker_1'],
-        speakerNames: 'Elena Rostova',
-        handoverNotes: 'Opening video bumper into walk-on',
-        slideDeckLink: 'https://docs.google.com/presentation/d/sample-keynote#slide=1',
-        cueNotes: 'Dim hall lights, mic check',
-      },
-    ];
-
-    const markdown = generateKeynoteMarkdown(session, mockStakeholders);
-
-    // Verify Title & Metadata
-    expect(markdown).toContain('# Spatial AI General Session');
-    expect(markdown).toContain('Connected Spatial Workflows');
-    expect(markdown).toContain('Acme Corp on-stage demo');
-    expect(markdown).toContain('https://docs.google.com/presentation/d/sample-keynote');
-
-    // Verify Structured Markdown Table Header
-    expect(markdown).toContain('| Time | Duration | Speaker(s) | Topic / Segment | Handover / Transition | Slide / Deck Link | Stage Cues & AV Notes |');
-    expect(markdown).toContain('| :--- | :--- | :--- | :--- | :--- | :--- | :--- |');
-
-    // Verify Row Content
-    expect(markdown).toContain('| 09:00 - 09:10 | 10 min | Elena Rostova | Keynote Introduction | Opening video bumper into walk-on | [Slides](https://docs.google.com/presentation/d/sample-keynote#slide=1) | Dim hall lights, mic check |');
-  });
-
-  it('generates rich HTML document formatted for Google Docs pasting', () => {
-    const eventId = 'evt_test_html';
-    const session = createKeynoteSession(eventId, {
-      title: 'Google Docs Presentation Run of Show',
-      date: '2026-11-05',
-      startTime: '09:00',
-      endTime: '10:00',
-      stageOrRoom: 'Mainstage Hall',
-      slideDeckUrl: 'https://docs.google.com/presentation/d/docs-deck',
-    });
-
-    session.segments = [
-      {
-        id: 'seg_1',
-        order: 1,
-        time: '09:00 - 09:15',
-        durationMinutes: 15,
-        topic: 'Executive Opening',
-        speakerIds: [],
-        speakerNames: 'Craig Trickett',
-        handoverNotes: 'Stage Left walk-on',
-        cueNotes: 'Center spotlight',
-      },
-    ];
-
-    const html = generateKeynoteMarkdown(session);
-    expect(html).toBeDefined();
-
-    const docHtml = generateKeynoteHtml(session);
-    expect(docHtml).toContain('<table');
-    expect(docHtml).toContain('Google Docs Presentation Run of Show');
-    expect(docHtml).toContain('Executive Opening');
-    expect(docHtml).toContain('Craig Trickett');
-    expect(docHtml).toContain('Center spotlight');
-  });
-
   it('deletes keynote session from storage', () => {
     const eventId = 'evt_test_del';
     const s1 = createKeynoteSession(eventId, {
@@ -257,5 +164,107 @@ describe('keynote helper', () => {
     const remaining = getKeynoteSessions(eventId);
     expect(remaining.some((s) => s.id === s1.id)).toBe(false);
     expect(remaining.some((s) => s.id === s2.id)).toBe(true);
+  });
+
+  describe('a new event starts without made-up sessions', () => {
+    it('has none, and does not store any just by looking', () => {
+      expect(getKeynoteSessions('evt_new')).toEqual([]);
+      expect(Object.keys(mockStorage).filter((k) => k.includes('evt_new'))).toEqual([]);
+    });
+
+    it('adds the sample sessions only when asked, and not on top of real ones', () => {
+      const sample = addSampleKeynoteSessions('evt_s');
+      expect(sample.length).toBeGreaterThan(0);
+      expect(getKeynoteSessions('evt_s')).toHaveLength(sample.length);
+      expect(addSampleKeynoteSessions('evt_s')).toHaveLength(sample.length);
+
+      const real = createKeynoteSession('evt_real', { title: 'Mine', date: '2026-11-09', startTime: '09:00', endTime: '10:00', stageOrRoom: 'Hall A' });
+      expect(addSampleKeynoteSessions('evt_real').map((s) => s.id)).toEqual([real.id]);
+    });
+
+    it('the sample sessions are the ones that used to be seeded, dated on the event start', () => {
+      expect(createSampleKeynoteSessions('e', '2026-11-04')[0].date).toBe('2026-11-04');
+    });
+  });
+
+  describe('shared storage', () => {
+    it('keeps sessions in the shared module, not in a device-only key', () => {
+      createKeynoteSession('evt_m', { title: 'Opening', date: '2026-11-09', startTime: '09:00', endTime: '10:00', stageOrRoom: 'Hall' });
+      expect(Object.keys(mockStorage)).toContain('boothduty_module_evt_m_keynote');
+      expect(Object.keys(mockStorage)).not.toContain('boothduty_keynotes_evt_m');
+      expect(getKeynoteSessions('evt_m')).toHaveLength(1);
+    });
+
+    it('moves sessions an earlier version kept on this device into the shared module, stamped with no time', () => {
+      const old = createSampleKeynoteSessions('evt_old', '2026-11-04');
+      mockStorage['boothduty_keynotes_evt_old'] = JSON.stringify(old);
+      const got = getKeynoteSessions('evt_old');
+      expect(got).toHaveLength(old.length);
+      expect(JSON.parse(mockStorage['boothduty_module_evt_old_keynote']).updatedAt).toBe('');
+    });
+
+    it('prefers the shared copy to an old device-only one', () => {
+      mockStorage['boothduty_keynotes_evt_p'] = JSON.stringify(createSampleKeynoteSessions('evt_p'));
+      mockStorage['boothduty_module_evt_p_keynote'] = JSON.stringify({ data: [], updatedAt: '2026-05-01T00:00:00.000Z' });
+      expect(getKeynoteSessions('evt_p')).toEqual([]);
+    });
+
+    it('reading never writes a shared copy that a later sync could treat as newer', () => {
+      getKeynoteSessions('evt_none');
+      expect(Object.keys(mockStorage).filter((k) => k.includes('evt_none'))).toEqual([]);
+    });
+  });
+
+  describe('corrupt stored data does not take a screen down', () => {
+    const wrap = (data: unknown) => JSON.stringify({ data, updatedAt: '2026-05-01T00:00:00.000Z' });
+    it.each([
+      ['null', null],
+      ['a string', 'x'],
+      ['a number', 42],
+      ['an object', { sessions: [] }],
+      ['an array of junk', [1, 'a', null, [], {}, { id: '' }]],
+    ])('reads %s as no sessions', (_name, data) => {
+      mockStorage['boothduty_module_evt_c_keynote'] = wrap(data);
+      expect(getKeynoteSessions('evt_c')).toEqual([]);
+    });
+
+    it('reads unparseable text as no sessions', () => {
+      mockStorage['boothduty_module_evt_c_keynote'] = '{{{';
+      expect(getKeynoteSessions('evt_c')).toEqual([]);
+    });
+
+    it('keeps a session that is missing its lists and nested objects, and fills them in', () => {
+      mockStorage['boothduty_module_evt_c_keynote'] = wrap([{ id: 'k1', title: 'Half a session' }]);
+      const [s] = getKeynoteSessions('evt_c');
+      expect(s).toMatchObject({ id: 'k1', title: 'Half a session', segments: [], rehearsals: [], assignedSpeakerIds: [], currentStage: 'develop_run_of_show' });
+      expect(s.stage1Narrative.customerCompanies).toEqual([]);
+      expect(s.weeklyMeeting.enabled).toBe(true);
+    });
+
+    it('drops only the broken sessions from a mixed list', () => {
+      mockStorage['boothduty_module_evt_c_keynote'] = wrap([{ id: 'ok', title: 'Fine' }, 'junk', null, { id: 'ok2' }]);
+      expect(getKeynoteSessions('evt_c').map((s) => s.id)).toEqual(['ok', 'ok2']);
+    });
+  });
+
+  describe('normaliseKeynoteSession', () => {
+    it('repairs segments: wrong types, missing ids, negative or non-numeric durations', () => {
+      const s = normaliseKeynoteSession({ id: 'k', segments: [{ topic: 5, durationMinutes: -3, speakerIds: 'x' }, 'bad', { id: 's2', durationMinutes: 'ten', order: 'first' }] })!;
+      expect(s.segments).toHaveLength(2);
+      expect(s.segments[0]).toMatchObject({ id: 'seg_0', topic: '', durationMinutes: 0, speakerIds: [], order: 1 });
+      expect(s.segments[1]).toMatchObject({ id: 's2', durationMinutes: 10, order: 2 });
+    });
+    it('falls back to a valid stage', () => {
+      expect(normaliseKeynoteSession({ id: 'k', currentStage: 'nonsense' })!.currentStage).toBe('develop_run_of_show');
+      expect(normaliseKeynoteSession({ id: 'k', currentStage: 'signed_off' })!.currentStage).toBe('signed_off');
+    });
+    it('leaves a good session as it was', () => {
+      const [good] = createSampleKeynoteSessions('e', '2026-11-04');
+      expect(normaliseKeynoteSession(good)).toEqual(good);
+      expect(normaliseKeynoteSessions([good])).toEqual([good]);
+    });
+    it('returns null for something that is not a session', () => {
+      for (const v of [null, undefined, 3, 'x', [], {}, { id: 3 }]) expect(normaliseKeynoteSession(v)).toBeNull();
+    });
   });
 });

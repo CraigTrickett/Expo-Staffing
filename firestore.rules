@@ -1,26 +1,78 @@
-// Expo Staffing — Firestore security rules
+// Showrunner: Firestore security rules
 //
 // Deploy with: firebase deploy --only firestore:rules
-// (or paste into Firebase Console → Firestore Database → Rules)
+// (or paste into Firebase Console > Firestore Database > Rules)
 //
-// Admin access now requires real Firebase Auth sign-in (see
-// FIREBASE_SETUP.md, "Enable admin login") — but that's enforced in the
-// app's Cloud Functions (exchangeGoogleAuthCode, disconnectGoogleCalendar,
-// deleteEvent, adminUpdateEvent all check request.auth server-side), not
-// here. These rules stay wide open on boothEvents because staff must be
-// able to claim/release shifts by writing directly to this same document
-// without logging in, and Firestore's rules language has no clean way to
-// allow "staff can edit bookings" while blocking "someone edits capacity"
-// on one shared document. Tightening that further would mean moving
-// bookings into their own subcollection — a real option later, not done
-// here.
+// Who can do what:
+//
+//   The expo floor staff page is open to anyone who has its link, with no sign-in. So anyone may READ
+//   one event, if they know its id (found through publicLinks), and may change only its shifts and
+//   roster: claim, release, add themselves. They cannot list events, create or delete one, or edit
+//   its details (name, dates, capacity, keys). Only admins can do those.
+//
+//   Everything else (budget, schedule, stakeholders, keynote and so on) lives under
+//   boothEvents/{id}/modules and needs an admin.
+//
+// What these rules cannot do: shifts and roster are inside one document, so a person holding a
+// staff link could in principle rewrite any shift or roster entry of that event. Stopping that
+// means giving each booking its own document. The staff link is the only thing protecting it.
+//
+// Test changes to this file with the Firebase emulator before deploying (see FIREBASE_SETUP.md).
 
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     match /boothEvents/{eventId} {
-      allow read, write: if true;
+      // One event, by its id. Staff reach it through publicLinks.
+      allow get: if true;
+      // Listing every event (and so every key and roster) is for admins.
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      // Staff may change only these three fields. Any other change needs an admin.
+      allow update: if isAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'roster', 'updatedAt']);
+    }
+
+    // Finds an event from its public (staff) key without listing events. One document per event,
+    // holding only the event's id. Readable one at a time, never listed, written by admins.
+    match /publicLinks/{publicKey} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isAdmin();
+    }
+
+    // Who counts as an admin: the two owners below (kept in step with
+    // ALLOWED_ADMIN_EMAILS in src/lib/firebase.ts and OWNER_EMAILS in
+    // functions/adminUsers.js), plus anyone with a document in adminUsers.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && (
+          request.auth.token.email.lower() in [
+            'craig_trickett@trimble.com',
+            'craigtrickett@gmail.com'
+          ]
+          || exists(/databases/$(database)/documents/adminUsers/$(request.auth.token.email.lower()))
+        );
+    }
+
+    // Module data (budget, schedule, notes). Unlike the event document above this
+    // holds figures and authorisations that staff have no reason to see, so it
+    // requires an admin. These rules need deploying separately:
+    //   firebase deploy --only firestore:rules
+    match /boothEvents/{eventId}/modules/{moduleId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Granted admins. Written only by the grantAdminUser and revokeAdminUser
+    // Cloud Functions, never by a client. A signed-in person may read their own
+    // document, which is how the app tells they are an admin.
+    match /adminUsers/{email} {
+      allow read: if request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == email;
+      allow write: if false;
     }
 
     // Google Calendar OAuth refresh tokens live here (written only by the

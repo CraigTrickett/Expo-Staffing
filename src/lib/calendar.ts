@@ -28,6 +28,33 @@ export function formatIcsDateTime(dateStr: string, timeStr: string, timeZone?: s
  * Generates a standard RFC 5545 `.ics` payload matching UTC dates/times
  * with event title, booth location, shift details, and a 15-minute advance alarm.
  */
+/**
+ * RFC 5545 asks for lines of at most 75 octets: a longer one is split, each continuation starting with
+ * a single space. Counted in bytes, never splitting a multi-byte character, so names with accents or
+ * emoji survive intact.
+ */
+export function foldIcsLine(line: string, limit = 75): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= limit) return line;
+  const parts: string[] = [];
+  let current = '';
+  let size = 0;
+  let max = limit; // continuation lines lose one octet to the leading space
+  for (const ch of line) {
+    const bytes = encoder.encode(ch).length;
+    if (size + bytes > max) {
+      parts.push(current);
+      current = '';
+      size = 0;
+      max = limit - 1;
+    }
+    current += ch;
+    size += bytes;
+  }
+  parts.push(current);
+  return parts.join('\r\n ');
+}
+
 export function generateIcsFile(
   event: EventConfig,
   bookings: { slot: TimeSlot; booking: ShiftBooking }[]
@@ -40,7 +67,7 @@ export function generateIcsFile(
     'PRODID:-//ExpoStaffing//ExpoStaffing Event Shift Scheduler v1.0//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${escapeIcsText(event.title)} - Expo Staffing`,
+    `X-WR-CALNAME:${escapeIcsText(event.title)} - Showrunner`,
     `X-WR-TIMEZONE:${event.timezone || 'UTC'}`,
   ];
 
@@ -49,7 +76,7 @@ export function generateIcsFile(
     const dtEnd = formatIcsDateTime(slot.date, slot.endTime, event.timezone);
     const uid = `${booking.id || slot.id}-${booking.staffId}@expostaffing.app`;
 
-    const summary = `Expo Staffing: ${event.title}`;
+    const summary = `Showrunner: ${event.title}`;
     const description = `Shift assigned to ${booking.staffName} (${booking.staffEmail}) for ${event.title}.\nLocation: ${event.location || 'Exhibition Hall'}\n${event.description || ''}`;
     const location = event.location || 'Conference Exhibition Hall';
 
@@ -67,7 +94,7 @@ export function generateIcsFile(
       'BEGIN:VALARM',
       'TRIGGER:-PT15M',
       'ACTION:DISPLAY',
-      `DESCRIPTION:Reminder: Expo Staffing Shift at ${escapeIcsText(event.title)} starts in 15 minutes`,
+      `DESCRIPTION:Reminder: Showrunner Shift at ${escapeIcsText(event.title)} starts in 15 minutes`,
       'END:VALARM',
       'END:VEVENT'
     );
@@ -76,7 +103,7 @@ export function generateIcsFile(
   lines.push('END:VCALENDAR');
 
   // RFC 5545 specifies CRLF line endings
-  return lines.join('\r\n');
+  return lines.map((line) => foldIcsLine(line)).join('\r\n');
 }
 
 /**

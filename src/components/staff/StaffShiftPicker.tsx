@@ -1,19 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  AlertCircle,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Download,
-  ExternalLink,
-  Lock,
-  MapPin,
-  Sparkles,
-  Trash2,
-  User,
-  Users,
-  X,
-} from 'lucide-react';
+import { AlertCircle, Calendar, Clock, Lock, MapPin, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useEventStore } from '@/store/useEventStore';
 import { IdentityBar } from './IdentityBar';
@@ -74,7 +60,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
       // — rather than a silent scroll with no explanation.
       document.getElementById('identity-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setIdentityPromptTrigger((n) => n + 1);
-      toast.info('Select your name first, then claim this shift.', 'Who Are You?');
+      toast.info('Select your name first, then claim this shift.');
       return;
     }
 
@@ -143,7 +129,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
     return (
       <div className="max-w-7xl mx-auto py-20 px-4 flex flex-col items-center justify-center space-y-4 text-center">
         <div className="w-10 h-10 border-4 border-[#0063a3]/20 border-t-[#0063a3] rounded-full animate-spin" />
-        <p className="text-sm text-[#46535e] font-semibold">Loading Expo Staffing Shifts...</p>
+        <p className="text-sm text-[#46535e] font-semibold">Loading Showrunner Shifts...</p>
       </div>
     );
   }
@@ -164,7 +150,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
             onClick={resetToDemo}
             className="focus-ring px-4 py-2 bg-[#0063a3] hover:bg-[#005084] text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
-            Load Demo Schedule
+            Load demo schedule
           </button>
         </div>
       </div>
@@ -233,24 +219,11 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
               </span>
             </div>
           </div>
-
-          {/* Quick instructions pill */}
-          <div className="bg-[#f8f9fa] border border-[#d8dce0] rounded p-3 text-xs text-[#252a2e] max-w-sm">
-            <div className="font-bold text-[#252a2e] mb-1 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#0063a3]" />
-              <span>How it works:</span>
-            </div>
-            <p className="text-[11px] text-[#46535e] leading-relaxed">
-              1. Confirm your name in the top bar. <br />
-              2. Tap any open slot to claim instantly. <br />
-              3. Tap your claimed slot anytime to release it.
-            </p>
-          </div>
         </div>
 
         {/* Matrix Instructions & Legend */}
         <div className="flex items-center justify-between text-xs text-[#46535e] flex-wrap gap-2">
-          <span>Click any open shift to claim. Your claimed shifts show in primary blue.</span>
+          <span>Tap an open shift to claim it.</span>
           <div className="flex items-center space-x-3 text-[11px]">
             <span className="flex items-center space-x-1.5">
               <span className="w-3 h-3 rounded bg-[#e5f2f8] border border-[#0063a3] inline-block" />
@@ -311,7 +284,7 @@ export const StaffShiftPicker: React.FC<StaffShiftPickerProps> = ({ publicKey })
 
             <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-white/20 group-hover:bg-white/30 rounded text-xs font-semibold">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Sync Calendar</span>
+              <span>Sync calendar</span>
             </div>
           </button>
         </div>

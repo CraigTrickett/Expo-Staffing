@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Filter, Sparkles } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 import type { EventConfig, StaffMember, TimeSlot } from '@/types';
 import { ShiftTile } from './ShiftTile';
 import { cn, formatDate } from '@/lib/utils';
@@ -140,7 +140,7 @@ export const ShiftMatrix: React.FC<ShiftMatrixProps> = ({
                   : 'text-[#46535e] hover:text-[#252a2e] hover:bg-[#f1f3f6] border-transparent'
               )}
             >
-              Fully Staffed
+              Fully staffed
             </button>
           </div>
         </div>

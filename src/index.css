@@ -147,3 +147,167 @@ body {
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Menu cards                                                          */
+/*                                                                     */
+/* A pane of glass that tilts under the pointer. The tilt, parallax    */
+/* layers and moving reflection follow marcreichel/apple-tv-card       */
+/* (MIT); the glass follows archisvaze/liquid-glass (MIT).             */
+/* ------------------------------------------------------------------ */
+
+/* The page background shared by every admin page: soft colour, a faint grid and thin rings. The colour
+   alone gave the glass nothing to bend; the fine lines are what make the refraction at a card's rim visible. */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(54rem 38rem at 6% -4%, rgba(74, 163, 223, 0.5), transparent 62%),
+    radial-gradient(48rem 34rem at 100% 8%, rgba(155, 140, 240, 0.42), transparent 62%),
+    radial-gradient(54rem 38rem at 40% 108%, rgba(60, 192, 176, 0.42), transparent 62%),
+    radial-gradient(34rem 28rem at 88% 88%, rgba(255, 196, 107, 0.42), transparent 62%),
+    linear-gradient(135deg, #e8f2fb 0%, #f1eefb 52%, #e6f5f1 100%);
+}
+.app-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(20, 40, 75, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 40, 75, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.app-backdrop__rings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(70, 105, 160, 0.5);
+  stroke-width: 2.5;
+}
+
+.tilt-container {
+  position: relative;
+}
+
+.glass-card {
+  --glass-radius: 32px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 10.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--glass-radius);
+  isolation: isolate;
+  overflow: hidden;
+  color: #1b2a38;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 24px rgba(0, 40, 90, 0.14);
+  transform-origin: 50%;
+  transform-style: preserve-3d;
+  transition: transform 50ms ease-in-out, box-shadow 200ms ease-out;
+  outline: none;
+}
+
+/* The tint, and the soft light along the inside of the rim. */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0.26);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 0 20px -5px rgba(255, 255, 255, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+/* The glass itself: frosted by default, refracting where the browser can run an SVG filter on the backdrop. */
+.glass-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  isolation: isolate;
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+}
+[data-glass='svg'] .glass-card::after {
+  backdrop-filter: url(#showrunner-glass);
+  -webkit-backdrop-filter: url(#showrunner-glass);
+}
+
+.glass-card.is-active,
+.glass-card:focus-visible {
+  box-shadow: 0 1.5rem 2rem 0.25rem rgba(0, 40, 90, 0.28);
+}
+.glass-card:focus-visible {
+  transform: translateZ(4rem);
+  outline: 3px solid #0063a3;
+  outline-offset: 3px;
+}
+
+/* Parallax layers: each shifts by its own factor (--k) as the card tilts (--tx, --ty). */
+.glass-card__layer {
+  position: relative;
+  z-index: 1;
+  transform: scale(var(--s, 1)) translate(calc(var(--tx, 0) * var(--k, 0) * 1px), calc(var(--ty, 0) * var(--k, 0) * 1px));
+  transition: transform 50ms ease-in-out;
+}
+.glass-card__mark {
+  position: absolute;
+  right: -0.9rem;
+  bottom: -1rem;
+  z-index: 1;
+  color: #0063a3;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* The highlight that follows the pointer. */
+.glass-card__reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: calc(var(--rs, 300) * 1px);
+  height: calc(var(--rs, 300) * 1px);
+  margin: calc(var(--rs, 300) * -0.5px) 0 0 calc(var(--rs, 300) * -0.5px);
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.47), transparent 70%);
+  opacity: 0;
+  transform: translate(calc(var(--rx, 0) * 1px), calc(var(--ry, 0) * 1px));
+  transition: opacity 120ms ease-out;
+}
+.glass-card.is-active .glass-card__reflection {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card,
+  .glass-card__layer,
+  .glass-card__reflection {
+    transition: none;
+  }
+}
+
+/* Where transparency is turned off, use a solid card so nothing depends on what is behind it. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card::before {
+    background-color: rgba(255, 255, 255, 0.94);
+  }
+  .glass-card::after,
+  [data-glass='svg'] .glass-card::after {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .glass-card {
+    border: 1px solid CanvasText;
+  }
+}

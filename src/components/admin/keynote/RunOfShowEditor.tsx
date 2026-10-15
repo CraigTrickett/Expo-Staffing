@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Reorder, motion, useDragControls, useReducedMotion } from 'motion/react';
 import {
   ArrowDown,
   ArrowUp,
+  ChevronRight,
   ExternalLink,
   GripVertical,
   ListPlus,
@@ -24,11 +25,11 @@ import {
 import { addStakeholder, TEAMS_OPTIONS } from '@/lib/stakeholders';
 import { getTeamTone, UNASSIGNED_TONE } from '@/lib/teamTone';
 import { toast } from '@/components/common/Toast';
-import { InlineNumber, InlineText, inlineFieldClass } from './InlineField';
+import { InlineNumber, InlineText, inlineFieldClass } from '@/components/common/InlineField';
 import { TeamChip } from './TeamChip';
 
 const COLUMNS =
-  'grid-cols-[56px_104px_76px_minmax(160px,1.2fr)_minmax(180px,1.4fr)_minmax(140px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_68px]';
+  'grid-cols-[56px_104px_76px_minmax(160px,1.2fr)_minmax(180px,1.4fr)_minmax(140px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_96px]';
 
 const SPRING = { type: 'spring', stiffness: 520, damping: 42, mass: 0.7 } as const;
 const INSTANT = { duration: 0 } as const;
@@ -159,7 +160,7 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
     setIsAdding(false);
     setFlashId(seg.id);
     announce(`Added \u201c${seg.topic}\u201d as segment ${itemsRef.current.length + 1}.`);
-    toast.success('Added segment to run of show.', 'Segment Added');
+    toast.success('Segment added.');
   };
 
   const handleCreatedStakeholder = (newStk: KeyStakeholder) => {
@@ -174,7 +175,7 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
       setTargetSegmentForNewStakeholder(null);
     }
     setIsAddingStakeholder(false);
-    toast.success(`Added ${newStk.firstName} ${newStk.lastName} to Key Stakeholders.`, 'Stakeholder Created');
+    toast.success(`Added ${newStk.firstName} ${newStk.lastName} to Key Stakeholders.`);
   };
 
   useEffect(() => {
@@ -195,12 +196,9 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
     <div className="space-y-3 rounded border border-[#d8dce0] bg-white p-4 shadow-2xs">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-[#252a2e]">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#252a2e]">
             Run of Show Sequence &amp; Timing Blocks
-          </h4>
-          <p className="mt-0.5 text-[11px] text-[#5b6770]">
-            Click any cell to edit. Drag the grip to reorder. Columns align with the structured Markdown &amp; Google Docs exports.
-          </p>
+          </h3>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -213,7 +211,7 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
             title="Add a new stakeholder to the event directory"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            <span>Add Stakeholder</span>
+            <span>Add stakeholder</span>
           </button>
           <button
             type="button"
@@ -221,7 +219,7 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
             className="focus-ring flex cursor-pointer items-center gap-1 rounded bg-[#0063a3] px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#005084]"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Add Segment</span>
+            <span>Add segment</span>
           </button>
         </div>
       </div>
@@ -350,7 +348,7 @@ export const RunOfShowEditor: React.FC<RunOfShowEditorProps> = ({
               <ListPlus className="h-5 w-5 text-[#5b6770]" aria-hidden="true" />
               <p className="text-xs font-semibold text-[#252a2e]">No segments yet</p>
               <p className="max-w-xs text-[11px] text-[#5b6770]">
-                Add the first block of the show. Start times fill in from the session start as you build the order.
+                Add the first segment.
               </p>
             </div>
           )}
@@ -426,6 +424,9 @@ const SegmentRow: React.FC<SegmentRowProps> = ({
   registerControl,
 }) => {
   const controls = useDragControls();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
+  const hasDetails = !!(seg.theme || seg.keyMessage || seg.takeaway || seg.timingNotes);
   const linkedId = seg.speakerIds[0] ?? '';
   const linkedKnown = !linkedId || stakeholders.some((s) => s.id === linkedId);
 
@@ -611,6 +612,21 @@ const SegmentRow: React.FC<SegmentRowProps> = ({
 
       {/* 9. Actions */}
       <div role="cell" className="flex items-center justify-end gap-0.5 pt-1 pr-1">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((v) => !v)}
+          aria-expanded={detailsOpen}
+          aria-controls={detailsId}
+          aria-label={`${detailsOpen ? 'Hide' : 'Show'} document details for segment ${index + 1}${hasDetails ? ' (has details)' : ''}`}
+          title="Theme, key message, takeaway and timing for the document"
+          className="focus-ring relative cursor-pointer rounded p-1 text-[#5b6770] hover:bg-[#e5f2f8] hover:text-[#0063a3]"
+        >
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${detailsOpen ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+          {hasDetails && <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[#0063a3]" aria-hidden="true" />}
+        </button>
         <div className="flex flex-col">
           <button
             type="button"
@@ -644,6 +660,41 @@ const SegmentRow: React.FC<SegmentRowProps> = ({
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
+      </div>
+
+      {/* Document details: these become the Theme, Key Message, Takeaway and Timing rows of the exported run of show. */}
+      <div
+        id={detailsId}
+        role="cell"
+        inert={!detailsOpen}
+        className={`col-span-full grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+          detailsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 gap-3 border-t border-[#e7eaef] bg-[#f8f9fa] px-4 py-3 md:grid-cols-2">
+            {(
+              [
+                ['theme', 'Theme', 'What this segment is about, in a line'],
+                ['keyMessage', 'Key message', 'What the audience should hear'],
+                ['takeaway', 'Takeaway / understanding', 'What they should leave understanding'],
+                ['timingNotes', 'Timing', 'How the time splits, and what to cut if it runs long'],
+              ] as const
+            ).map(([field, label, placeholder]) => (
+              <div key={field}>
+                <div className="mb-1 text-[11px] font-semibold text-[#5b6770]">{label}</div>
+                <InlineText
+                  multiline
+                  value={seg[field] ?? ''}
+                  label={`${label} for segment ${index + 1}`}
+                  placeholder={placeholder}
+                  onCommit={(next) => onUpdate(seg.id, { [field]: next || undefined })}
+                  className="border-[#d8dce0] bg-white"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </Reorder.Item>
   );
@@ -822,7 +873,7 @@ const AddSegmentForm: React.FC<{
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) {
-      toast.error('Topic is required.', 'Missing Field');
+      toast.error('Topic is required.', 'Missing field');
       return;
     }
     const match = stakeholders.find((s) => s.id === speakerId);
@@ -983,7 +1034,7 @@ const AddSegmentForm: React.FC<{
           type="submit"
           className="focus-ring cursor-pointer rounded bg-[#0063a3] px-3.5 py-1 text-xs font-semibold text-white shadow-xs hover:bg-[#005084]"
         >
-          Add Segment
+          Add segment
         </button>
       </div>
     </form>
@@ -1013,7 +1064,7 @@ const QuickAddStakeholderModal: React.FC<QuickAddStakeholderModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      toast.error('First name, last name, and email are required.', 'Missing Fields');
+      toast.error('First name, last name, and email are required.', 'Missing fields');
       return;
     }
     const newStk = addStakeholder(eventId, {
@@ -1035,7 +1086,7 @@ const QuickAddStakeholderModal: React.FC<QuickAddStakeholderModalProps> = ({
         <div className="flex items-center justify-between pb-2 border-b border-[#e5e9ec]">
           <div className="flex items-center gap-2 text-[#0063a3]">
             <UserPlus className="w-4 h-4" />
-            <h4 className="text-sm font-bold">Quick Add Key Stakeholder</h4>
+            <h3 className="text-sm font-bold">Quick Add Key Stakeholder</h3>
           </div>
           <button
             type="button"
@@ -1045,10 +1096,6 @@ const QuickAddStakeholderModal: React.FC<QuickAddStakeholderModalProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <p className="text-xs text-[#5b6770]">
-          Add this speaker to the Key Stakeholders directory. They will immediately be available across all event sessions.
-        </p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>

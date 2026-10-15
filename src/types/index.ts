@@ -141,6 +141,11 @@ export interface RunOfShowSegment {
   handoverNotes?: string;
   slideDeckLink?: string;
   cueNotes?: string;
+  /** Run of show document fields. Transition is handoverNotes. */
+  theme?: string;
+  keyMessage?: string;
+  takeaway?: string;
+  timingNotes?: string;
 }
 
 export interface KeynoteSession {
@@ -160,6 +165,12 @@ export interface KeynoteSession {
   segments: RunOfShowSegment[];
   signedOffBy?: string;
   signedOffAt?: string;
+  /** Shown under the session heading in the run of show document. */
+  abstract?: string;
+  /** Printed between this session and the next, e.g. "Lunch Break". */
+  breakAfter?: string;
+  /** The room in Schedule this keynote is in. stageOrRoom holds that room's name, for the export. */
+  spaceId?: string;
   createdAt: string;
   updatedAt: string;
 }

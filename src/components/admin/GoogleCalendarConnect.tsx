@@ -48,7 +48,7 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
 
   const handleConnect = () => {
     if (!window.google?.accounts?.oauth2) {
-      toast.error('Google Sign-In has not finished loading yet — please try again in a moment.', 'Not Ready');
+      toast.error('Google Sign-In has not finished loading yet — please try again in a moment.', 'Not ready');
       return;
     }
 
@@ -63,7 +63,7 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
         if (!response.code) {
           setIsConnecting(false);
           if (response.error) {
-            toast.error('Google Calendar connection was cancelled or failed.', 'Not Connected');
+            toast.error('Google Calendar connection was cancelled or failed.', 'Not connected');
           }
           return;
         }
@@ -71,11 +71,9 @@ export const GoogleCalendarConnect: React.FC<GoogleCalendarConnectProps> = ({ co
         setIsConnecting(false);
         if (ok) {
           toast.success(
-            'New shift claims will now automatically invite staff to their shift.',
-            'Google Calendar Connected'
-          );
+            'Google Calendar connected. New claims now invite staff automatically.');
         } else {
-          toast.error('Could not connect Google Calendar. Please try again.', 'Connection Failed');
+          toast.error('Could not connect Google Calendar. Please try again.', 'Connection failed');
         }
       },
     });

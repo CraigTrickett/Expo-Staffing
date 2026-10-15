@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Clock, MapPin, Trash2, User, X } from 'lucide-react';
+import { Clock, MapPin, Trash2, User, X } from 'lucide-react';
 import type { ShiftBooking, TimeSlot } from '@/types';
 import { calculateSlotDurationMinutes, formatDuration, formatTime12h, formatDate } from '@/lib/utils';
 import { toast } from '@/components/common/Toast';
@@ -31,10 +31,10 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
     setIsSubmitting(true);
     try {
       await onConfirmRelease(slot.id, booking.id);
-      toast.info(`Shift released for ${formatTime12h(slot.startTime)}. Slot is now open for others.`);
+      toast.info(`Released the ${formatTime12h(slot.startTime)} shift.`);
       onClose();
     } catch {
-      toast.error('Failed to release shift. Please try again.');
+      toast.error('Could not release the shift. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -59,9 +59,6 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
               <h3 className="text-base font-bold text-[#252a2e] tracking-tight">
                 Release Shift?
               </h3>
-              <p className="text-xs text-[#46535e]">
-                Give up your expo staffing spot for this time.
-              </p>
             </div>
           </div>
 
@@ -117,7 +114,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
             disabled={isSubmitting}
             className="focus-ring px-4 py-2 bg-white hover:bg-[#f1f3f6] text-[#252a2e] border border-[#d8dce0] rounded text-xs font-semibold transition-colors cursor-pointer"
           >
-            Keep Shift
+            Keep shift
           </button>
           <button
             type="button"
@@ -130,7 +127,7 @@ export const ReleaseShiftModal: React.FC<ReleaseShiftModalProps> = ({
             ) : (
               <>
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Yes, Release Shift</span>
+                <span>Yes, release shift</span>
               </>
             )}
           </button>

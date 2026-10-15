@@ -48,7 +48,7 @@ test.describe('Event lifecycle', () => {
     const title = `Delete Me ${Date.now()}`;
     await createEventThroughWizard(page, { title });
 
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     await expect(page.getByText(title)).toBeVisible();
 
     page.once('dialog', (dialog) => dialog.accept());
@@ -66,7 +66,7 @@ test.describe('Event lifecycle', () => {
     const title = `Do Not Delete ${Date.now()}`;
     await createEventThroughWizard(page, { title });
 
-    await page.getByRole('button', { name: 'All Events' }).click();
+    await page.getByRole('link', { name: 'All events' }).click();
     page.once('dialog', (dialog) => dialog.dismiss());
     await page
       .locator('div', { hasText: title })
